@@ -51,6 +51,10 @@
   "layout": {
     "title": "PixivFlow WebUI",
     "dashboard": "仪表盘",
+    "aiIntegration": "AI 接入",
+    "collection": "素材采集",
+    "videoStudio": "视频生成",
+    "commandPresets": "命令预设",
     "config": "配置管理",
     "download": "下载任务",
     "urlDownload": "URL 下载",

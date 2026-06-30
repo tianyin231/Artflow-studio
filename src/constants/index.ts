@@ -93,11 +93,11 @@ export const QUERY_KEYS = {
     params ? ['logs', params] : ['logs'],
   
   // Files
-  FILES: (params?: { path?: string; type?: string; sort?: string; order?: string; dateFilter?: string }) => 
+  FILES: (params?: { path?: string; type?: string; source?: string; category?: string; sort?: string; order?: string; dateFilter?: string }) => 
     params ? ['files', params] : ['files'],
   FILES_RECENT: (params?: { limit?: number; type?: 'illustration' | 'novel'; filter?: string }) => 
     params ? ['files', 'recent', params] : ['files', 'recent'],
-  FILES_PREVIEW: (path: string, type?: string) => type ? ['files', 'preview', path, type] : ['files', 'preview', path],
+  FILES_PREVIEW: (path: string, type?: string, source?: string) => ['files', 'preview', path, type || '', source || 'classic'],
 } as const;
 
 /**
@@ -139,4 +139,3 @@ export const SORT_ORDER = {
   ASC: 'asc',
   DESC: 'desc',
 } as const;
-

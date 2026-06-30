@@ -12,6 +12,7 @@ export { downloadApi } from './download';
 export { filesApi } from './files';
 export { logsApi } from './logs';
 export { statsApi } from './stats';
+export { workflowApi } from './workflow';
 
 // Export client and utilities
 export { apiClient, createApiClient, createCustomApiClient } from './client';
@@ -28,6 +29,7 @@ import { downloadApi } from './download';
 import { filesApi } from './files';
 import { logsApi } from './logs';
 import { statsApi } from './stats';
+import { workflowApi } from './workflow';
 
 /**
  * Unified API object for backward compatibility
@@ -91,5 +93,11 @@ export const api = {
   getFilePreview: filesApi.getFilePreview,
   deleteFile: filesApi.deleteFile,
   normalizeFiles: filesApi.normalizeFiles,
-};
 
+  // Workflow
+  listWorkflowTasks: workflowApi.listTasks,
+  getWorkflowTask: workflowApi.getTask,
+  createWorkflowTask: workflowApi.createTask,
+  approveWorkflowTask: workflowApi.approveTask,
+  rejectWorkflowTask: workflowApi.rejectTask,
+};

@@ -6,6 +6,10 @@ import { LoadingSpinner } from './components/common/LoadingSpinner';
 
 // Lazy load page components for code splitting
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const AiIntegration = lazy(() => import('./pages/AiIntegration'));
+const PixivCollection = lazy(() => import('./pages/PixivCollection'));
+const VideoStudio = lazy(() => import('./pages/VideoStudio'));
+const CommandPresets = lazy(() => import('./pages/CommandPresets'));
 const Config = lazy(() => import('./pages/Config'));
 const Download = lazy(() => import('./pages/Download'));
 const UrlDownload = lazy(() => import('./pages/UrlDownload'));
@@ -45,6 +49,38 @@ export function AppRoutes() {
             element={
               <Suspense fallback={<LoadingSpinner />}>
                 <Config />
+              </Suspense>
+            }
+          />
+          <Route
+            path="ai"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <AiIntegration />
+              </Suspense>
+            }
+          />
+          <Route
+            path="collection"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <PixivCollection />
+              </Suspense>
+            }
+          />
+          <Route
+            path="video"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <VideoStudio />
+              </Suspense>
+            }
+          />
+          <Route
+            path="presets"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <CommandPresets />
               </Suspense>
             }
           />
@@ -93,4 +129,3 @@ export function AppRoutes() {
     </Suspense>
   );
 }
-

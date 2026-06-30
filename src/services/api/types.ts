@@ -19,6 +19,220 @@ export interface StatsOverview {
   recentDownloads: number;
 }
 
+export type WorkflowStageStatus = 'pending' | 'running' | 'completed' | 'failed' | 'blocked';
+export type WorkflowTaskStatus =
+  | 'running'
+  | 'asset_review_required'
+  | 'cover_review_required'
+  | 'review_required'
+  | 'approved'
+  | 'rejected'
+  | 'published'
+  | 'failed';
+export type WorkflowPrefilterMode = 'manual' | 'ai_rules' | 'keep_all';
+export type WorkflowAction =
+  | 'continue_assets_manual'
+  | 'continue_assets_keep_all'
+  | 'continue_assets_ai_rules'
+  | 'approve_cover'
+  | 'approve_video'
+  | 'reject';
+
+export interface WorkflowStage {
+  id: 'plan' | 'download' | 'filter' | 'image' | 'render' | 'review' | 'publish';
+  label: string;
+  status: WorkflowStageStatus;
+  message: string;
+  progress: number;
+  startedAt?: string;
+  completedAt?: string;
+  error?: string;
+}
+
+export interface WorkflowPlan {
+  title: string;
+  description: string;
+  pixivTarget: {
+    type: 'illustration' | 'novel';
+    tag?: string;
+    limit?: number;
+    searchTarget?: string;
+    sort?: string;
+    minBookmarks?: number;
+    startDate?: string;
+    endDate?: string;
+    tagWhitelist?: string[];
+    tagBlacklist?: string[];
+  };
+  video: {
+    style: string;
+    motion: WorkflowVideoMotion;
+    width: number;
+    height: number;
+    fps: number;
+    secondsPerImage: number;
+    crossfade: number;
+    zoom: number;
+    maxImages: number;
+    shuffleSeed: number;
+    totalDuration?: number;
+    bgmPath?: string;
+  };
+  publish: {
+    platform: 'bilibili';
+    dryRun: true;
+    category: string;
+    tags: string[];
+    original: boolean;
+    aigc: boolean;
+  };
+}
+
+export type WorkflowVideoMotion = 'none' | 'slow_zoom' | 'beat_zoom';
+
+export interface WorkflowVideoOverrides {
+  aspectRatio?: '16:9' | '9:16' | '1:1';
+  totalDuration?: number;
+  maxImages?: number;
+  secondsPerImage?: number;
+  fps?: number;
+  crossfade?: number;
+  zoom?: number;
+  motion?: WorkflowVideoMotion;
+  bgmPath?: string;
+  style?: 'beat' | 'soft' | 'square';
+}
+
+export interface WorkflowPixivOverrides {
+  tag?: string;
+  limit?: number;
+  searchTarget?: 'partial_match_for_tags' | 'exact_match_for_tags' | 'title_and_caption';
+  sort?: 'date_desc' | 'date_asc' | 'popular_desc';
+  mode?: 'search' | 'ranking';
+  rankingMode?: string;
+  rankingDate?: string;
+  filterTag?: string;
+  minBookmarks?: number;
+  startDate?: string;
+  endDate?: string;
+  tagWhitelist?: string[];
+  tagBlacklist?: string[];
+}
+
+export interface WorkflowImageAsset {
+  path: string;
+  name: string;
+  width: number;
+  height: number;
+  size: number;
+  pixivId?: string;
+  title?: string;
+  caption?: string;
+  author?: {
+    id: string;
+    name: string;
+    account?: string;
+    profileImageUrls?: Record<string, string>;
+  };
+  tags?: Array<{ name: string; translated_name?: string }>;
+  fileHash?: string;
+  status: 'accepted' | 'rejected';
+  reason?: string;
+}
+
+export interface WorkflowProgressEvent {
+  id: string;
+  timestamp: string;
+  stage: WorkflowStage['id'];
+  type: 'stage' | 'asset' | 'cover' | 'video' | 'publish';
+  message: string;
+  current?: number;
+  total?: number;
+  assetName?: string;
+  artifactPath?: string;
+}
+
+export interface WorkflowLatestArtifact {
+  type: 'asset' | 'cover' | 'video' | 'publish';
+  name?: string;
+  path?: string;
+  assetIndex?: number;
+  message?: string;
+}
+
+export interface WorkflowTask {
+  id: string;
+  command: string;
+  status: WorkflowTaskStatus;
+  createdAt: string;
+  updatedAt: string;
+  stages: WorkflowStage[];
+  plan?: WorkflowPlan;
+  pixivConfig?: ConfigData;
+  assets: WorkflowImageAsset[];
+  currentStage?: WorkflowStage['id'];
+  latestArtifact?: WorkflowLatestArtifact;
+  requiresUserConfirmation?: boolean;
+  availableActions?: WorkflowAction[];
+  progressEvents?: WorkflowProgressEvent[];
+  coverPath?: string;
+  videoPath?: string;
+  review?: {
+    status: 'pending' | 'approved' | 'rejected';
+    note?: string;
+    reviewedAt?: string;
+  };
+  publish?: {
+    status: 'pending' | 'dry_run_completed';
+    platform: 'bilibili';
+    message?: string;
+    publishedAt?: string;
+  };
+  logs: Array<{
+    timestamp: string;
+    level: 'info' | 'warn' | 'error';
+    message: string;
+  }>;
+}
+
+export interface CommandPreset {
+  id: string;
+  name: string;
+  command: string;
+  category: string;
+  payload?: unknown;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AiIntegrationSettings {
+  provider: 'local-rules' | 'openai' | 'anthropic' | 'ollama';
+  model: string;
+  baseUrl: string;
+  apiKey: string;
+  planningMode: 'rules-first' | 'ai-first';
+}
+
+export interface AiModelInfo {
+  id: string;
+  name: string;
+  source?: string;
+}
+
+export interface AiConnectionTestResult {
+  ok: boolean;
+  latencyMs?: number;
+  message?: string;
+}
+
+export interface AiBalanceResult {
+  supported: boolean;
+  endpoint?: string;
+  message?: string;
+  raw?: unknown;
+  errors?: string[];
+}
+
 /**
  * Download task status
  */
@@ -91,6 +305,9 @@ export interface FileItem {
   modified?: string;
   downloadedAt?: string | null;
   extension?: string;
+  source?: 'classic' | 'workflow';
+  category?: string;
+  displayPath?: string;
 }
 
 /**
@@ -100,6 +317,9 @@ export interface FilesResponse {
   files: FileItem[];
   directories: FileItem[];
   currentPath: string;
+  source?: 'classic' | 'workflow';
+  category?: string;
+  basePath?: string;
 }
 
 /**
@@ -321,4 +541,3 @@ export interface NormalizeFilesResult {
  * Type helper for API response
  */
 export type ApiResponseType<T> = Promise<AxiosResponse<ApiResponse<T>>>;
-

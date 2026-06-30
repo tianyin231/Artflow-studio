@@ -5,7 +5,8 @@ import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
 
 const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
-const textExtensions = ['.txt', '.md', '.text'];
+const textExtensions = ['.txt', '.md', '.text', '.json'];
+const videoExtensions = ['.mp4', '.mov', '.webm', '.mkv'];
 
 export interface FileItem {
   name: string;
@@ -15,29 +16,35 @@ export interface FileItem {
   modified?: string;
   downloadedAt?: string | null;
   extension?: string;
+  source?: 'classic' | 'workflow';
+  category?: string;
+  displayPath?: string;
 }
 
 export interface FilePreviewProps {
   visible: boolean;
   file: FileItem | null;
-  fileType: 'illustration' | 'novel';
+  fileType: 'illustration' | 'novel' | 'workflow';
+  fileSource?: 'classic' | 'workflow';
   onClose: () => void;
 }
 
 /**
  * File preview component using PreviewModal
  */
-export function FilePreview({ visible, file, fileType, onClose }: FilePreviewProps) {
+export function FilePreview({ visible, file, fileType, fileSource = 'classic', onClose }: FilePreviewProps) {
   const { t } = useTranslation();
   const [textContent, setTextContent] = useState<string>('');
 
   const ext = file?.extension?.toLowerCase() || '';
   const isImage = imageExtensions.includes(ext);
   const isText = textExtensions.includes(ext);
+  const isVideo = videoExtensions.includes(ext);
 
   const { previewUrl, isLoading: isLoadingPreview } = useFilePreview(
-    isImage ? file?.path : undefined,
-    fileType
+    isImage || isVideo ? file?.path : undefined,
+    fileType,
+    fileSource
   );
 
   // Load text content for text files
@@ -45,7 +52,7 @@ export function FilePreview({ visible, file, fileType, onClose }: FilePreviewPro
     if (visible && file && isText) {
       const loadTextContent = async () => {
         try {
-          const previewUrl = `/api/files/preview?path=${encodeURIComponent(file.path)}&type=${fileType}`;
+          const previewUrl = `/api/files/preview?path=${encodeURIComponent(file.path)}&type=${fileType}&source=${fileSource}`;
           const response = await fetch(previewUrl);
           if (response.ok) {
             const text = await response.text();
@@ -63,7 +70,7 @@ export function FilePreview({ visible, file, fileType, onClose }: FilePreviewPro
     } else if (!visible) {
       setTextContent('');
     }
-  }, [visible, file, isText, fileType, t, onClose]);
+  }, [visible, file, isText, fileType, fileSource, t, onClose]);
 
   if (!file) return null;
 
@@ -73,6 +80,27 @@ export function FilePreview({ visible, file, fileType, onClose }: FilePreviewPro
     previewType = 'image';
   } else if (isText) {
     previewType = 'text';
+  }
+
+  if (isVideo) {
+    return (
+      <PreviewModal
+        open={visible}
+        title={file.name}
+        type="custom"
+        content={
+          <video
+            src={previewUrl || undefined}
+            controls
+            style={{ width: '100%', maxHeight: '70vh', background: '#111827', borderRadius: 8 }}
+          />
+        }
+        loading={isLoadingPreview}
+        onCancel={onClose}
+        width={960}
+        showFooter={false}
+      />
+    );
   }
 
   return (
@@ -89,4 +117,3 @@ export function FilePreview({ visible, file, fileType, onClose }: FilePreviewPro
     />
   );
 }
-

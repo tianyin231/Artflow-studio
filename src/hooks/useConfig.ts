@@ -98,8 +98,10 @@ export function useConfigFiles() {
     onError: (error) => handleError(error),
   });
 
+  const safeConfigFiles = Array.isArray(configFiles) ? configFiles : [];
+
   return {
-    configFiles: configFiles || [],
+    configFiles: safeConfigFiles,
     isLoading,
     error,
     refetch,
@@ -222,4 +224,3 @@ export function useConfigValidation() {
     repairResult: repairMutation.data,
   };
 }
-

@@ -5,13 +5,15 @@ import { useErrorHandler } from '../../../hooks/useErrorHandler';
 import { FileItem } from '../Files';
 
 const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+const videoExtensions = ['.mp4', '.mov', '.webm', '.mkv'];
 
 /**
  * Hook for managing file operations (preview, delete)
  */
 export function useFileOperations(
-  deleteFileAsync: (params: { id: string; path?: string; type?: string }) => Promise<void>,
-  fileType: 'illustration' | 'novel',
+  deleteFileAsync: (params: { id: string; path?: string; type?: string; source?: 'classic' | 'workflow' }) => Promise<void>,
+  fileType: 'illustration' | 'novel' | 'workflow',
+  fileSource: 'classic' | 'workflow',
   onNavigate?: (path: string) => void
 ) {
   const { t } = useTranslation();
@@ -28,9 +30,10 @@ export function useFileOperations(
 
       const ext = file.extension?.toLowerCase() || '';
       const isImage = imageExtensions.includes(ext);
-      const isText = ['.txt', '.md', '.text'].includes(ext);
+      const isVideo = videoExtensions.includes(ext);
+      const isText = ['.txt', '.md', '.text', '.json'].includes(ext);
 
-      if (isImage || isText) {
+      if (isImage || isVideo || isText) {
         setPreviewFile(file);
         setPreviewVisible(true);
       } else {
@@ -43,13 +46,13 @@ export function useFileOperations(
   const handleDelete = useCallback(
     async (file: FileItem) => {
       try {
-        await deleteFileAsync({ id: file.name, path: file.path, type: fileType });
+        await deleteFileAsync({ id: file.name, path: file.path, type: fileType, source: fileSource });
         message.success(t('files.fileDeleted'));
       } catch (error) {
         handleError(error);
       }
     },
-    [deleteFileAsync, fileType, handleError, t]
+    [deleteFileAsync, fileType, fileSource, handleError, t]
   );
 
   const closePreview = useCallback(() => {
@@ -65,4 +68,3 @@ export function useFileOperations(
     closePreview,
   };
 }
-

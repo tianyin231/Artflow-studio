@@ -1,6 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import { Layout, theme } from 'antd';
-import { useState } from 'react';
+import { Layout } from 'antd';
 import { LayoutHeader, LayoutSider } from './components';
 import { useLayoutAuth } from './hooks';
 
@@ -10,11 +9,6 @@ const { Content } = Layout;
  * Main application layout component
  */
 export default function AppLayout() {
-  const [collapsed, setCollapsed] = useState(false);
-  const {
-    token: { colorBgContainer },
-  } = theme.useToken();
-
   const {
     isAuthenticated,
     isLoggingOut,
@@ -25,9 +19,8 @@ export default function AppLayout() {
   } = useLayoutAuth();
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <LayoutSider collapsed={collapsed} onCollapse={setCollapsed} />
-      <Layout>
+    <Layout className="paf-shell">
+      <div className="paf-topbar">
         <LayoutHeader
           isAuthenticated={isAuthenticated}
           isLoggingOut={isLoggingOut}
@@ -35,15 +28,12 @@ export default function AppLayout() {
           onLogin={handleLogin}
           onLogout={handleLogout}
           onRefreshToken={handleRefreshToken}
-          colorBgContainer={colorBgContainer}
         />
+        <LayoutSider />
+      </div>
+      <Layout className="paf-main">
         <Content
-          style={{
-            margin: '24px 16px',
-            padding: 24,
-            minHeight: 280,
-            background: colorBgContainer,
-          }}
+          className="paf-content"
         >
           <Outlet />
         </Content>
@@ -51,4 +41,3 @@ export default function AppLayout() {
     </Layout>
   );
 }
-

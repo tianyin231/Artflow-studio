@@ -8,6 +8,18 @@ import {
   ConfigRepairResult,
 } from './api';
 
+function unwrapConfigFilesPayload(payload: unknown): ConfigFileInfo[] {
+  if (Array.isArray(payload)) {
+    return payload as ConfigFileInfo[];
+  }
+
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    return unwrapConfigFilesPayload((payload as { data: unknown }).data);
+  }
+
+  return [];
+}
+
 /**
  * Configuration Service
  * Encapsulates all configuration-related API calls
@@ -102,7 +114,7 @@ export const configService = {
    */
   async listConfigFiles(): Promise<ConfigFileInfo[]> {
     const response = await api.listConfigFiles();
-    return response.data.data;
+    return unwrapConfigFilesPayload(response.data);
   },
 
   /**
@@ -171,4 +183,3 @@ export const configService = {
     return response.data.data;
   },
 };
-

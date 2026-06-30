@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Card, Button, Space, Select, Row, Col, Typography } from 'antd';
+import { Alert, Card, Button, Space, Select, Row, Col, Typography } from 'antd';
 import {
   PictureOutlined,
   FileTextOutlined,
   ToolOutlined,
+  FolderOpenOutlined,
+  VideoCameraOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useFiles } from '../../hooks/useFiles';
@@ -31,6 +33,12 @@ export interface FileItem {
   modified?: string;
   downloadedAt?: string | null;
   extension?: string;
+  source?: 'classic' | 'workflow';
+  category?: string;
+  displayPath?: string;
+  recursiveFileCount?: number;
+  recursiveImageCount?: number;
+  recursiveSize?: number;
 }
 
 /**
@@ -38,7 +46,9 @@ export interface FileItem {
  */
 export default function Files() {
   const { t } = useTranslation();
-  const [fileType, setFileType] = useState<'illustration' | 'novel'>('illustration');
+  const [fileSource, setFileSource] = useState<'classic' | 'workflow'>('classic');
+  const [fileType, setFileType] = useState<'illustration' | 'novel' | 'workflow'>('illustration');
+  const [workflowCategory, setWorkflowCategory] = useState<'all' | 'assets' | 'covers' | 'videos' | 'configs'>('all');
   const [normalizeModalVisible, setNormalizeModalVisible] = useState(false);
 
   // File browser navigation
@@ -54,6 +64,8 @@ export default function Files() {
   const { files, directories, isLoading, deleteFileAsync } = useFiles({
     path: currentPath,
     type: fileType,
+    source: fileSource,
+    category: workflowCategory,
     sort: sortBy,
     order: sortOrder,
     dateFilter: dateFilter === 'all' ? undefined : dateFilter,
@@ -69,14 +81,28 @@ export default function Files() {
     handlePreview,
     handleDelete,
     closePreview,
-  } = useFileOperations(deleteFileAsync, fileType, handleNavigate);
+  } = useFileOperations(deleteFileAsync, fileType, fileSource, handleNavigate);
 
   // Statistics
   const stats = useFileStatistics(files, directories);
 
   // Handle file type change
-  const handleFileTypeChange = (value: 'illustration' | 'novel') => {
+  const handleFileSourceChange = (value: 'classic' | 'workflow') => {
+    setFileSource(value);
+    setFileType(value === 'workflow' ? 'workflow' : 'illustration');
+    setWorkflowCategory('all');
+    resetPath();
+    setSearchText('');
+  };
+
+  const handleFileTypeChange = (value: 'illustration' | 'novel' | 'workflow') => {
     setFileType(value);
+    resetPath();
+    setSearchText('');
+  };
+
+  const handleWorkflowCategoryChange = (value: 'all' | 'assets' | 'covers' | 'videos' | 'configs') => {
+    setWorkflowCategory(value);
     resetPath();
     setSearchText('');
   };
@@ -102,9 +128,22 @@ export default function Files() {
         <Col>
           <Space>
             <Select
+              value={fileSource}
+              onChange={handleFileSourceChange}
+              style={{ width: 150 }}
+            >
+              <Option value="classic">
+                <FolderOpenOutlined /> 原下载目录
+              </Option>
+              <Option value="workflow">
+                <VideoCameraOutlined /> 工作流产物
+              </Option>
+            </Select>
+            <Select
               value={fileType}
               onChange={handleFileTypeChange}
               style={{ width: 150 }}
+              disabled={fileSource === 'workflow'}
             >
               <Option value="illustration">
                 <PictureOutlined /> {t('dashboard.illustrations')}
@@ -112,7 +151,23 @@ export default function Files() {
               <Option value="novel">
                 <FileTextOutlined /> {t('dashboard.novels')}
               </Option>
+              <Option value="workflow">
+                <VideoCameraOutlined /> 工作流
+              </Option>
             </Select>
+            {fileSource === 'workflow' && (
+              <Select
+                value={workflowCategory}
+                onChange={handleWorkflowCategoryChange}
+                style={{ width: 150 }}
+              >
+                <Option value="all">全部</Option>
+                <Option value="assets">下载图片</Option>
+                <Option value="covers">封面</Option>
+                <Option value="videos">视频</Option>
+                <Option value="configs">配置/数据库</Option>
+              </Select>
+            )}
             <Button
               type="primary"
               icon={<ToolOutlined />}
@@ -130,6 +185,16 @@ export default function Files() {
         images={stats.images}
         totalSize={stats.totalSize}
       />
+
+      {fileSource === 'workflow' && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="当前正在浏览工作流产物"
+          description="根目录为 pixivflow/workflow_runs。进入某个任务目录后可按下载图片、封面、视频和配置分类查看。"
+        />
+      )}
 
       <Card style={{ overflow: 'hidden' }}>
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
@@ -161,6 +226,7 @@ export default function Files() {
             onDelete={handleDelete}
             onNavigate={handleNavigate}
             fileType={fileType}
+            fileSource={fileSource}
           />
         </Space>
       </Card>
@@ -169,6 +235,7 @@ export default function Files() {
         visible={previewVisible}
         file={previewFile}
         fileType={fileType}
+        fileSource={fileSource}
         onClose={closePreview}
       />
 
@@ -179,4 +246,3 @@ export default function Files() {
     </div>
   );
 }
-

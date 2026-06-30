@@ -10,15 +10,18 @@ export function useFileStatistics(files: FileItem[], directories: FileItem[]) {
   const stats = useMemo(() => {
     const all = [...directories, ...files];
     const directoriesCount = all.filter((item) => item.type === 'directory').length;
-    const filesCount = all.filter((item) => item.type === 'file').length;
-    const totalSize = all
-      .filter((item) => item.type === 'file' && item.size)
-      .reduce((sum, item) => sum + (item.size || 0), 0);
-    const images = all.filter(
-      (item) =>
-        item.type === 'file' &&
-        imageExtensions.includes(item.extension?.toLowerCase() || '')
-    ).length;
+    const filesCount = all.reduce((sum, item) => {
+      if (item.type === 'directory') return sum + (item.recursiveFileCount || 0);
+      return sum + 1;
+    }, 0);
+    const totalSize = all.reduce((sum, item) => {
+      if (item.type === 'directory') return sum + (item.recursiveSize || 0);
+      return sum + (item.size || 0);
+    }, 0);
+    const images = all.reduce((sum, item) => {
+      if (item.type === 'directory') return sum + (item.recursiveImageCount || 0);
+      return imageExtensions.includes(item.extension?.toLowerCase() || '') ? sum + 1 : sum;
+    }, 0);
 
     const formatFileSize = (bytes: number) => {
       if (bytes < 1024) return `${bytes} B`;
@@ -36,4 +39,3 @@ export function useFileStatistics(files: FileItem[], directories: FileItem[]) {
 
   return stats;
 }
-

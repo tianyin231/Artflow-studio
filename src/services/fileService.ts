@@ -11,6 +11,8 @@ export const fileService = {
   async listFiles(params?: {
     path?: string;
     type?: string;
+    source?: 'classic' | 'workflow';
+    category?: string;
     sort?: string;
     order?: string;
     dateFilter?: 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'all';
@@ -34,15 +36,15 @@ export const fileService = {
   /**
    * Get file preview (image or text content)
    */
-  async getFilePreview(path: string, type?: string): Promise<Blob> {
-    const response = await api.getFilePreview(path, type);
+  async getFilePreview(path: string, type?: string, source?: 'classic' | 'workflow'): Promise<Blob> {
+    const response = await api.getFilePreview(path, type, source);
     return response.data;
   },
 
   /**
    * Delete a file
    */
-  async deleteFile(id: string, params?: { path?: string; type?: string }): Promise<void> {
+  async deleteFile(id: string, params?: { path?: string; type?: string; source?: 'classic' | 'workflow' }): Promise<void> {
     await api.deleteFile(id, params);
   },
 
@@ -60,4 +62,3 @@ export const fileService = {
     return response.data.data;
   },
 };
-

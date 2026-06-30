@@ -9,6 +9,8 @@ import { QUERY_KEYS } from '../constants';
 export function useFiles(params?: {
   path?: string;
   type?: string;
+  source?: 'classic' | 'workflow';
+  category?: string;
   sort?: string;
   order?: string;
   dateFilter?: 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'all';
@@ -27,8 +29,8 @@ export function useFiles(params?: {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: ({ id, path, type }: { id: string; path?: string; type?: string }) =>
-      fileService.deleteFile(id, { path, type }),
+    mutationFn: ({ id, path, type, source }: { id: string; path?: string; type?: string; source?: 'classic' | 'workflow' }) =>
+      fileService.deleteFile(id, { path, type, source }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.FILES() });
     },
@@ -77,15 +79,15 @@ export function useRecentFiles(params?: {
 /**
  * Hook for file preview
  */
-export function useFilePreview(path: string | undefined, type?: string) {
+export function useFilePreview(path: string | undefined, type?: string, source?: 'classic' | 'workflow') {
   const {
     data: previewBlob,
     isLoading,
     error,
     refetch,
   } = useQuery({
-    queryKey: QUERY_KEYS.FILES_PREVIEW(path!, type),
-    queryFn: () => fileService.getFilePreview(path!, type),
+    queryKey: QUERY_KEYS.FILES_PREVIEW(path!, type, source),
+    queryFn: () => fileService.getFilePreview(path!, type, source),
     enabled: !!path,
   });
 
@@ -129,4 +131,3 @@ export function useFileNormalize() {
     normalizeResult: normalizeMutation.data,
   };
 }
-

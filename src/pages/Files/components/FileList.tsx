@@ -14,7 +14,8 @@ import { useTranslation } from 'react-i18next';
 import { formatDate } from '../../../utils/dateUtils';
 
 const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
-const textExtensions = ['.txt', '.md', '.text'];
+const textExtensions = ['.txt', '.md', '.text', '.json'];
+const videoExtensions = ['.mp4', '.mov', '.webm', '.mkv'];
 
 export interface FileItem {
   name: string;
@@ -24,6 +25,12 @@ export interface FileItem {
   modified?: string;
   downloadedAt?: string | null;
   extension?: string;
+  source?: 'classic' | 'workflow';
+  category?: string;
+  displayPath?: string;
+  recursiveFileCount?: number;
+  recursiveImageCount?: number;
+  recursiveSize?: number;
 }
 
 export interface FileListProps {
@@ -36,7 +43,8 @@ export interface FileListProps {
   onPreview: (file: FileItem) => void;
   onDelete: (file: FileItem) => void;
   onNavigate: (path: string) => void;
-  fileType: 'illustration' | 'novel';
+  fileType: 'illustration' | 'novel' | 'workflow';
+  fileSource?: 'classic' | 'workflow';
 }
 
 /**
@@ -66,6 +74,9 @@ export function FileList({
     if (sortBy !== column) return null;
     return sortOrder === 'asc' ? <SortAscendingOutlined /> : <SortDescendingOutlined />;
   };
+
+  const canDelete = (record: FileItem) =>
+    !(record.type === 'file' && record.extension?.toLowerCase() === '.db');
 
   // Combine directories and files, directories first
   const allItems = useMemo(() => {
@@ -145,10 +156,31 @@ export function FileList({
         if (imageExtensions.includes(ext)) {
           return <Tag color="green" icon={<PictureOutlined />}>{t('files.typeImage')}</Tag>;
         }
+        if (videoExtensions.includes(ext)) {
+          return <Tag color="purple" icon={<FileOutlined />}>视频</Tag>;
+        }
         if (textExtensions.includes(ext)) {
-          return <Tag color="orange" icon={<FileTextOutlined />}>{t('files.typeText')}</Tag>;
+          return <Tag color="orange" icon={<FileTextOutlined />}>{ext === '.json' ? '配置' : t('files.typeText')}</Tag>;
         }
         return <Tag icon={<FileOutlined />}>{t('files.typeFile')}</Tag>;
+      },
+    },
+    {
+      title: '分类',
+      dataIndex: 'category',
+      key: 'category',
+      width: 120,
+      render: (category: string | undefined, record: FileItem) => {
+        if (record.type === 'directory') return record.source === 'workflow' ? <Tag color="gold">任务</Tag> : '-';
+        const labels: Record<string, string> = {
+          asset: '下载图片',
+          cover: '封面',
+          video: '视频',
+          config: '配置',
+          illustration: '插画',
+          novel: '小说',
+        };
+        return <Tag>{labels[category || ''] || category || '-'}</Tag>;
       },
     },
     {
@@ -198,6 +230,14 @@ export function FileList({
       },
     },
     {
+      title: '保存路径',
+      dataIndex: 'displayPath',
+      key: 'displayPath',
+      width: 260,
+      ellipsis: { showTitle: true },
+      render: (path: string | undefined, record: FileItem) => path || record.path,
+    },
+    {
       title: t('files.actions'),
       key: 'action',
       width: 150,
@@ -206,7 +246,8 @@ export function FileList({
         <Space>
           {record.type === 'file' &&
             (imageExtensions.includes(record.extension?.toLowerCase() || '') ||
-              textExtensions.includes(record.extension?.toLowerCase() || '')) && (
+              textExtensions.includes(record.extension?.toLowerCase() || '') ||
+              videoExtensions.includes(record.extension?.toLowerCase() || '')) && (
               <Button
                 type="link"
                 icon={<EyeOutlined />}
@@ -216,9 +257,9 @@ export function FileList({
                 {t('files.preview')}
               </Button>
             )}
-          {record.type === 'file' && (
+          {canDelete(record) && (
             <Popconfirm
-              title={t('files.confirmDelete')}
+              title={record.type === 'directory' ? '确认删除该目录及其关联记录？' : t('files.confirmDelete')}
               onConfirm={() => onDelete(record)}
               okText={t('common.ok')}
               cancelText={t('common.cancel')}
@@ -252,4 +293,3 @@ export function FileList({
     </div>
   );
 }
-

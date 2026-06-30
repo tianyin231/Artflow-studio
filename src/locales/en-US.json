@@ -51,6 +51,10 @@
   "layout": {
     "title": "PixivFlow WebUI",
     "dashboard": "Dashboard",
+    "aiIntegration": "AI Integration",
+    "collection": "Collection",
+    "videoStudio": "Video Studio",
+    "commandPresets": "Command Presets",
     "config": "Configuration",
     "download": "Download Tasks",
     "urlDownload": "URL Download",
@@ -736,4 +740,3 @@
     "LOGS_CLEAR_FAILED": "Failed to clear logs"
   }
 }
-

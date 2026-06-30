@@ -12,6 +12,8 @@ export const filesApi = {
   listFiles: (params?: {
     path?: string;
     type?: string;
+    source?: 'classic' | 'workflow';
+    category?: string;
     sort?: string;
     order?: string;
     dateFilter?: 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'all';
@@ -52,8 +54,8 @@ export const filesApi = {
    * @param path - File path
    * @param type - File type
    */
-  getFilePreview: (path: string, type?: string): Promise<AxiosResponse<Blob>> =>
-    apiClient.get('/files/preview', { params: { path, type }, responseType: 'blob' }),
+  getFilePreview: (path: string, type?: string, source?: 'classic' | 'workflow'): Promise<AxiosResponse<Blob>> =>
+    apiClient.get('/files/preview', { params: { path, type, source }, responseType: 'blob' }),
 
   /**
    * Delete a file
@@ -62,7 +64,7 @@ export const filesApi = {
    */
   deleteFile: (
     id: string,
-    params?: { path?: string; type?: string }
+    params?: { path?: string; type?: string; source?: 'classic' | 'workflow' }
   ): Promise<AxiosResponse<ApiResponse<void>>> =>
     apiClient.delete(`/files/${id}`, { params }),
 
@@ -79,4 +81,3 @@ export const filesApi = {
   }): Promise<AxiosResponse<ApiResponse<NormalizeFilesResult>>> =>
     apiClient.post('/files/normalize', options),
 };
-

@@ -1,5 +1,6 @@
-import { Layout, Menu } from 'antd';
+import { Menu } from 'antd';
 import {
+  ApiOutlined,
   DashboardOutlined,
   SettingOutlined,
   DownloadOutlined,
@@ -7,21 +8,17 @@ import {
   HistoryOutlined,
   FileTextOutlined,
   FolderOutlined,
+  SaveOutlined,
+  SearchOutlined,
+  VideoCameraOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-const { Sider } = Layout;
-
-interface LayoutSiderProps {
-  collapsed: boolean;
-  onCollapse: (collapsed: boolean) => void;
-}
-
 /**
- * Layout sidebar component
+ * Horizontal product navigation. The export name is kept for compatibility.
  */
-export default function LayoutSider({ collapsed, onCollapse }: LayoutSiderProps) {
+export default function LayoutSider() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,6 +28,26 @@ export default function LayoutSider({ collapsed, onCollapse }: LayoutSiderProps)
       key: '/dashboard',
       icon: <DashboardOutlined />,
       label: t('layout.dashboard'),
+    },
+    {
+      key: '/ai',
+      icon: <ApiOutlined />,
+      label: t('layout.aiIntegration'),
+    },
+    {
+      key: '/collection',
+      icon: <SearchOutlined />,
+      label: t('layout.collection'),
+    },
+    {
+      key: '/video',
+      icon: <VideoCameraOutlined />,
+      label: t('layout.videoStudio'),
+    },
+    {
+      key: '/presets',
+      icon: <SaveOutlined />,
+      label: t('layout.commandPresets'),
     },
     {
       key: '/config',
@@ -69,30 +86,14 @@ export default function LayoutSider({ collapsed, onCollapse }: LayoutSiderProps)
   };
 
   return (
-    <Sider collapsible collapsed={collapsed} onCollapse={onCollapse} theme="dark">
-      <div
-        style={{
-          height: 32,
-          margin: 16,
-          background: 'rgba(255, 255, 255, 0.3)',
-          borderRadius: 4,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          fontWeight: 'bold',
-        }}
-      >
-        {collapsed ? 'PF' : 'PixivFlow'}
-      </div>
+    <nav className="paf-tabs" aria-label="Pixiv Auto Flow navigation">
       <Menu
-        theme="dark"
+        className="paf-tabs-menu"
         selectedKeys={[location.pathname]}
-        mode="inline"
+        mode="horizontal"
         items={menuItems}
         onClick={handleMenuClick}
       />
-    </Sider>
+    </nav>
   );
 }
-
