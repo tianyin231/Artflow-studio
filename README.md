@@ -77,6 +77,50 @@ pixivflow-webui/
 - Node.js 18+ 和 npm
 - 运行中的后端 API 服务器（需要先安装并启动后端：`npm install -g pixivflow && pixivflow webui`）
 
+### Artflow 私有部署说明
+
+本仓库是基于 PixivFlow WebUI 的私有二次开发前端，当前作为 **Artflow-studio** 使用。后端项目位于独立仓库 **Artflow-core**，前端通过 HTTP API 连接后端。
+
+在新电脑上部署前端：
+
+```bash
+git clone https://github.com/tianyin231/Artflow-studio.git
+cd Artflow-studio
+npm install
+npm run build
+```
+
+开发模式：
+
+```bash
+npm run dev
+```
+
+默认开发地址为 `http://localhost:5173`。请先启动后端 API 服务：
+
+```bash
+cd ../Artflow-core
+npm run webui
+```
+
+如果后端不是默认端口，请通过环境变量指定：
+
+```bash
+VITE_DEV_API_PORT=3000 npm run dev
+```
+
+生产构建产物位于 `dist/`，可以部署到静态文件服务器。生产环境 API 地址可通过 `VITE_API_URL` 配置。
+
+不要提交这些本地运行文件：
+
+- `node_modules/`
+- `dist/`
+- `build/`
+- `release/`
+- `.env.local`
+- `.env.*.local`
+- 测试报告和覆盖率目录
+
 ### 安装步骤
 
 1. 克隆仓库：
