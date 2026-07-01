@@ -77,6 +77,7 @@ export interface WorkflowPlan {
     shuffleSeed: number;
     totalDuration?: number;
     bgmPath?: string;
+    disclaimer?: WorkflowVideoDisclaimer;
   };
   publish: {
     platform: 'bilibili';
@@ -88,7 +89,24 @@ export interface WorkflowPlan {
   };
 }
 
-export type WorkflowVideoMotion = 'none' | 'slow_zoom' | 'beat_zoom';
+export type WorkflowVideoMotion =
+  | 'auto'
+  | 'none'
+  | 'slow_zoom'
+  | 'beat_zoom'
+  | 'pan_zoom'
+  | 'slide_parallax'
+  | 'beat_cut'
+  | 'drift_zoom'
+  | 'cinematic_sway'
+  | 'pulse_pop';
+
+export interface WorkflowVideoDisclaimer {
+  enabled: boolean;
+  duration: number;
+  title: string;
+  lines: string[];
+}
 
 export interface WorkflowVideoOverrides {
   aspectRatio?: '16:9' | '9:16' | '1:1';
@@ -101,6 +119,70 @@ export interface WorkflowVideoOverrides {
   motion?: WorkflowVideoMotion;
   bgmPath?: string;
   style?: 'beat' | 'soft' | 'square';
+  disclaimer?: WorkflowVideoDisclaimer;
+}
+
+export interface WorkflowPublishOverrides {
+  title?: string;
+  description?: string;
+  tags?: string[];
+  dynamic?: string;
+  category?: string;
+  original?: boolean;
+  aigc?: boolean;
+  syncArticle?: boolean;
+  articleTitle?: string;
+  articleBody?: string;
+}
+
+export interface WorkflowPublishCaptionResult extends WorkflowPublishOverrides {
+  title: string;
+  description: string;
+  tags: string[];
+  dynamic: string;
+  provider?: string;
+}
+
+export interface BilibiliPublishSource {
+  pixivId?: string;
+  title?: string;
+  authorName?: string;
+  authorId?: string;
+  url?: string;
+}
+
+export interface BilibiliPublishPreview {
+  platform: 'bilibili';
+  mode: 'dry_run' | 'open_platform';
+  taskId: string;
+  videoPath?: string;
+  coverPath?: string;
+  title: string;
+  description: string;
+  category: string;
+  tags: string[];
+  copyright: 1 | 2;
+  noReprint: boolean;
+  source: string;
+  dynamic: string;
+  aigc: boolean;
+  syncArticle: boolean;
+  article?: {
+    title: string;
+    body: string;
+  };
+  sources: BilibiliPublishSource[];
+}
+
+export interface BilibiliOpenPlatformPublishResult {
+  status: 'not_configured' | 'queued' | 'submitted' | 'failed';
+  platform: 'bilibili';
+  message: string;
+  requestId?: string;
+  bvid?: string;
+  aid?: string;
+  articleId?: string;
+  raw?: unknown;
 }
 
 export interface WorkflowPixivOverrides {
@@ -186,6 +268,17 @@ export interface WorkflowTask {
     status: 'pending' | 'dry_run_completed';
     platform: 'bilibili';
     message?: string;
+    packagePath?: string;
+    descriptionPath?: string;
+    articlePath?: string;
+    articleMarkdownPath?: string;
+    title?: string;
+    description?: string;
+    dynamic?: string;
+    tags?: string[];
+    category?: string;
+    sourceCount?: number;
+    syncArticle?: boolean;
     publishedAt?: string;
   };
   logs: Array<{
@@ -509,6 +602,28 @@ export interface AuthLoginResponse {
     email?: string;
     [key: string]: unknown;
   };
+}
+
+export type SystemCheckStatus = 'ok' | 'warning' | 'error';
+
+export interface SystemCheckItem {
+  id: string;
+  label: string;
+  status: SystemCheckStatus;
+  message: string;
+  detail?: string;
+  suggestion?: string;
+}
+
+export interface SystemCheckResult {
+  status: SystemCheckStatus;
+  checkedAt: string;
+  summary: {
+    ok: number;
+    warning: number;
+    error: number;
+  };
+  items: SystemCheckItem[];
 }
 
 /**

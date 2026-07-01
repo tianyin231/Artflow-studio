@@ -12,6 +12,7 @@ export { downloadApi } from './download';
 export { filesApi } from './files';
 export { logsApi } from './logs';
 export { statsApi } from './stats';
+export { systemApi } from './system';
 export { workflowApi } from './workflow';
 
 // Export client and utilities
@@ -29,6 +30,7 @@ import { downloadApi } from './download';
 import { filesApi } from './files';
 import { logsApi } from './logs';
 import { statsApi } from './stats';
+import { systemApi } from './system';
 import { workflowApi } from './workflow';
 
 /**
@@ -82,6 +84,9 @@ export const api = {
   getDownloadStats: statsApi.getDownloadStats,
   getTagStats: statsApi.getTagStats,
   getAuthorStats: statsApi.getAuthorStats,
+
+  // System
+  checkSystem: systemApi.check,
 
   // Logs
   getLogs: logsApi.getLogs,

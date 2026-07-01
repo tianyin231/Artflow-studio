@@ -56,8 +56,15 @@ const aspectRatioOptions = [
 ];
 
 const motionOptions: Array<{ label: string; value: WorkflowVideoMotion }> = [
+  { label: '自动轮换', value: 'auto' },
   { label: '慢推近', value: 'slow_zoom' },
   { label: '卡点推拉', value: 'beat_zoom' },
+  { label: '平移推近', value: 'pan_zoom' },
+  { label: '视差滑动', value: 'slide_parallax' },
+  { label: '快速切换', value: 'beat_cut' },
+  { label: '漂移推近', value: 'drift_zoom' },
+  { label: '电影摇移', value: 'cinematic_sway' },
+  { label: '脉冲弹入', value: 'pulse_pop' },
   { label: '无动效', value: 'none' },
 ];
 
@@ -67,18 +74,38 @@ const prefilterModeOptions: Array<{ label: string; value: WorkflowPrefilterMode 
   { label: '全部保留', value: 'keep_all' },
 ];
 
-const defaultVideoConfig: Required<Pick<WorkflowVideoOverrides, 'aspectRatio' | 'totalDuration' | 'maxImages' | 'fps' | 'crossfade' | 'zoom' | 'motion' | 'style'>> &
+const defaultVideoConfig: Required<
+  Pick<WorkflowVideoOverrides, 'aspectRatio' | 'totalDuration' | 'maxImages' | 'fps' | 'crossfade' | 'zoom' | 'motion' | 'style' | 'disclaimer'>
+> &
   Pick<WorkflowVideoOverrides, 'bgmPath'> = {
   aspectRatio: '16:9',
-  totalDuration: 24,
+  totalDuration: 36,
   maxImages: 10,
-  fps: 30,
+  fps: 60,
   crossfade: 0.25,
   zoom: 1.06,
-  motion: 'slow_zoom',
+  motion: 'auto',
   style: 'beat',
   bgmPath: '',
+  disclaimer: {
+    enabled: true,
+    duration: 3,
+    title: '免责声明',
+    lines: [
+      '本视频为 Pixiv 插画整理与展示，作品版权归原作者所有。',
+      '画面右下角标注作者与 Pixiv ID，便于溯源与联系。',
+      '如原作者希望调整展示或移除内容，请联系处理。',
+    ],
+  },
 };
+
+function linesToText(lines?: string[]): string {
+  return (lines ?? []).join('\n');
+}
+
+function textToLines(text: string): string[] {
+  return text.split('\n');
+}
 
 function pickTask(tasks: WorkflowTask[], selectedTaskId?: string): WorkflowTask | undefined {
   if (selectedTaskId) {
@@ -93,8 +120,9 @@ function inferVideoConfig(command: string): typeof defaultVideoConfig {
   if (command.includes('方形') || command.includes('1:1')) next.aspectRatio = '1:1';
   if (command.includes('舒缓') || command.includes('柔和')) {
     next.style = 'soft';
-    next.motion = 'slow_zoom';
-    next.fps = 24;
+    next.motion = 'drift_zoom';
+    next.totalDuration = 42;
+    next.fps = 60;
     next.crossfade = 0.35;
     next.zoom = 1.02;
   }
@@ -165,6 +193,13 @@ export default function VideoStudio() {
           ...videoConfig,
           secondsPerImage,
           bgmPath: videoConfig.bgmPath?.trim() || undefined,
+          disclaimer: videoConfig.disclaimer
+            ? {
+                ...videoConfig.disclaimer,
+                title: videoConfig.disclaimer.title.trim() || '免责声明',
+                lines: videoConfig.disclaimer.lines.map((line) => line.trim()).filter(Boolean),
+              }
+            : undefined,
         }
       : undefined;
     const created = await createTask.mutateAsync({ command, dryRunDownload, prefilterMode, videoOverrides });
@@ -190,7 +225,7 @@ export default function VideoStudio() {
   const handleApprove = async () => {
     if (!task) return;
     await approveTask.mutateAsync({ taskId: task.id, note: '视频生成页审核通过' });
-    message.success('已通过审核，进入 B站 dry-run 发布');
+    message.success('已通过审核，正在生成 B站发布包');
   };
 
   const handleReject = async () => {
@@ -307,7 +342,7 @@ export default function VideoStudio() {
                     min={3}
                     max={600}
                     value={videoConfig.totalDuration}
-                    onChange={(value) => setVideoConfig((prev) => ({ ...prev, totalDuration: Number(value) || 24 }))}
+                    onChange={(value) => setVideoConfig((prev) => ({ ...prev, totalDuration: Number(value) || 36 }))}
                     style={{ width: '100%' }}
                   />
                 </Col>
@@ -385,6 +420,68 @@ export default function VideoStudio() {
                             value={videoConfig.bgmPath}
                             onChange={(event) => setVideoConfig((prev) => ({ ...prev, bgmPath: event.target.value }))}
                             placeholder="/Users/nn3/Music/demo.mp3，留空则无音乐"
+                          />
+                        </div>
+                      </Space>
+                    ),
+                  },
+                  {
+                    key: 'disclaimer',
+                    label: `免责声明 · ${videoConfig.disclaimer.enabled ? `${videoConfig.disclaimer.duration}s` : '关闭'}`,
+                    children: (
+                      <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                        <Checkbox
+                          checked={videoConfig.disclaimer.enabled}
+                          onChange={(event) =>
+                            setVideoConfig((prev) => ({
+                              ...prev,
+                              disclaimer: { ...prev.disclaimer, enabled: event.target.checked },
+                            }))
+                          }
+                        >
+                          在视频第一页显示
+                        </Checkbox>
+                        <Row gutter={[8, 8]}>
+                          <Col span={12}>
+                            <Text type="secondary">显示秒数</Text>
+                            <InputNumber
+                              min={0.5}
+                              max={20}
+                              step={0.5}
+                              value={videoConfig.disclaimer.duration}
+                              onChange={(value) =>
+                                setVideoConfig((prev) => ({
+                                  ...prev,
+                                  disclaimer: { ...prev.disclaimer, duration: Number(value) || 3 },
+                                }))
+                              }
+                              style={{ width: '100%' }}
+                            />
+                          </Col>
+                          <Col span={12}>
+                            <Text type="secondary">标题</Text>
+                            <Input
+                              value={videoConfig.disclaimer.title}
+                              onChange={(event) =>
+                                setVideoConfig((prev) => ({
+                                  ...prev,
+                                  disclaimer: { ...prev.disclaimer, title: event.target.value },
+                                }))
+                              }
+                            />
+                          </Col>
+                        </Row>
+                        <div>
+                          <Text type="secondary">正文，每行一条</Text>
+                          <Input.TextArea
+                            rows={4}
+                            value={linesToText(videoConfig.disclaimer.lines)}
+                            onChange={(event) =>
+                              setVideoConfig((prev) => ({
+                                ...prev,
+                                disclaimer: { ...prev.disclaimer, lines: textToLines(event.target.value) },
+                              }))
+                            }
                           />
                         </div>
                       </Space>
@@ -638,7 +735,23 @@ export default function VideoStudio() {
                                 复制路径
                               </Button>
                             </Space>
-                            {task.publish && <Alert type="success" showIcon message={task.publish.message} />}
+                            {task.publish && (
+                              <Alert
+                                type="success"
+                                showIcon
+                                message={task.publish.message}
+                                description={
+                                  <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                                    {task.publish.title && <Text strong>{task.publish.title}</Text>}
+                                    {task.publish.tags && <Text type="secondary">标签：{task.publish.tags.join(' / ')}</Text>}
+                                    {typeof task.publish.sourceCount === 'number' && <Text type="secondary">来源作品：{task.publish.sourceCount} 个</Text>}
+                                    {task.publish.packagePath && <Paragraph copyable={{ text: task.publish.packagePath }} ellipsis={{ rows: 1 }}>发布包：{task.publish.packagePath}</Paragraph>}
+                                    {task.publish.descriptionPath && <Paragraph copyable={{ text: task.publish.descriptionPath }} ellipsis={{ rows: 1 }}>简介：{task.publish.descriptionPath}</Paragraph>}
+                                    {task.publish.articleMarkdownPath && <Paragraph copyable={{ text: task.publish.articleMarkdownPath }} ellipsis={{ rows: 1 }}>专栏：{task.publish.articleMarkdownPath}</Paragraph>}
+                                  </Space>
+                                }
+                              />
+                            )}
                           </Space>
                         </Col>
                       </Row>

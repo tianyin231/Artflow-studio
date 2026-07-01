@@ -6,9 +6,13 @@ import {
   AiIntegrationSettings,
   AiModelInfo,
   ApiResponse,
+  BilibiliOpenPlatformPublishResult,
+  BilibiliPublishPreview,
   CommandPreset,
   WorkflowTask,
   WorkflowPixivOverrides,
+  WorkflowPublishCaptionResult,
+  WorkflowPublishOverrides,
   WorkflowPrefilterMode,
   WorkflowVideoOverrides,
 } from './types';
@@ -25,9 +29,10 @@ export const workflowApi = {
     dryRunDownload = false,
     videoOverrides?: WorkflowVideoOverrides,
     pixivOverrides?: WorkflowPixivOverrides,
-    prefilterMode?: WorkflowPrefilterMode
+    prefilterMode?: WorkflowPrefilterMode,
+    publishOverrides?: WorkflowPublishOverrides
   ): Promise<AxiosResponse<ApiResponse<WorkflowTask>>> =>
-    apiClient.post('/workflow/tasks', { command, dryRunDownload, videoOverrides, pixivOverrides, prefilterMode }),
+    apiClient.post('/workflow/tasks', { command, dryRunDownload, videoOverrides, pixivOverrides, prefilterMode, publishOverrides }),
 
   approveTask: (taskId: string, note?: string): Promise<AxiosResponse<ApiResponse<WorkflowTask>>> =>
     apiClient.post(`/workflow/tasks/${taskId}/approve`, { note }),
@@ -94,4 +99,25 @@ export const workflowApi = {
     settings: AiIntegrationSettings
   ): Promise<AxiosResponse<ApiResponse<AiBalanceResult>>> =>
     apiClient.post('/workflow/ai-settings/balance', settings),
+
+  generatePublishCaption: (payload: {
+    command?: string;
+    tag?: string;
+    sources?: Array<{ title?: string; authorName?: string; pixivId?: string; url?: string }>;
+    syncArticle?: boolean;
+  }): Promise<AxiosResponse<ApiResponse<WorkflowPublishCaptionResult>>> =>
+    apiClient.post('/workflow/publish-caption', payload),
+
+  previewBilibiliPublish: (taskId: string): Promise<AxiosResponse<ApiResponse<BilibiliPublishPreview>>> =>
+    apiClient.get(`/workflow/tasks/${taskId}/publish/preview`),
+
+  publishBilibiliOpenPlatform: (
+    taskId: string,
+    credentials?: { clientId?: string; clientSecret?: string; accessToken?: string; refreshToken?: string }
+  ): Promise<AxiosResponse<ApiResponse<{
+    video: BilibiliOpenPlatformPublishResult;
+    article?: BilibiliOpenPlatformPublishResult;
+    preview: BilibiliPublishPreview;
+  }>>> =>
+    apiClient.post(`/workflow/tasks/${taskId}/publish/bilibili-open-platform`, { credentials }),
 };

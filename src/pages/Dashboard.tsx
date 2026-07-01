@@ -39,6 +39,7 @@ import {
 } from '@ant-design/icons';
 import { CSSProperties, useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
+import { useNavigate } from 'react-router-dom';
 import {
   useApproveWorkflowTask,
   useContinueWorkflowAssets,
@@ -60,6 +61,7 @@ import {
   WorkflowTask,
   WorkflowVideoOverrides,
 } from '../services/api/types';
+import { buildPublishOverrides, defaultPublishConfig, PublishConfigValues, splitTags } from '../utils/publishConfig';
 
 const { Text, Title, Paragraph } = Typography;
 
@@ -101,6 +103,7 @@ type DashboardPresetPayload = {
   collection?: SerializedCollectionConfig;
   prefilterMode?: WorkflowPrefilterMode;
   video?: VideoConfigValues;
+  publish?: PublishConfigValues;
 };
 
 const defaultCommand = '';
@@ -119,10 +122,10 @@ const defaultCollectionConfig: CollectionConfigValues = {
 const defaultVideoConfig: VideoConfigValues = {
   aspectRatio: '16:9',
   style: 'beat',
-  motion: 'beat_zoom',
+  motion: 'auto',
   maxImages: 12,
-  secondsPerImage: 1.6,
-  fps: 30,
+  secondsPerImage: 3,
+  fps: 60,
   crossfade: 0.18,
   zoom: 1.08,
   totalDuration: undefined,
@@ -165,13 +168,6 @@ function formatBytes(bytes?: number): string {
   if (!bytes) return '-';
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
-function splitTags(value?: string): string[] {
-  return (value ?? '')
-    .split(/[,，\n]/)
-    .map((tag) => tag.trim())
-    .filter(Boolean);
 }
 
 function pickCommandNumber(command: string, patterns: RegExp[]): number | undefined {
@@ -220,9 +216,9 @@ function inferVideoConfig(command: string, current: VideoConfigValues): VideoCon
   }
   if (command.includes('舒缓') || command.includes('柔和') || command.toLowerCase().includes('soft')) {
     next.style = 'soft';
-    next.motion = 'slow_zoom';
-    next.secondsPerImage = 2.4;
-    next.fps = 24;
+    next.motion = 'drift_zoom';
+    next.secondsPerImage = 4;
+    next.fps = 60;
     next.crossfade = 0.35;
     next.zoom = 1.02;
   }
@@ -313,10 +309,12 @@ function StableAssetImage({
 export default function Dashboard() {
   const [collectionForm] = Form.useForm<CollectionConfigValues>();
   const [videoForm] = Form.useForm<VideoConfigValues>();
+  const navigate = useNavigate();
   const selectedTaskId = useWorkflowSelectionStore((state) => state.selectedTaskId);
   const setSelectedTaskId = useWorkflowSelectionStore((state) => state.setSelectedTaskId);
   const dashboardDraft = useWorkflowSelectionStore((state) => state.dashboardDraft);
   const setDashboardDraft = useWorkflowSelectionStore((state) => state.setDashboardDraft);
+  const publishDraft = useWorkflowSelectionStore((state) => state.publishDraft);
   const [command, setCommand] = useState(dashboardDraft?.command ?? defaultCommand);
   const [prefilterMode, setPrefilterMode] = useState<WorkflowPrefilterMode>(dashboardDraft?.prefilterMode ?? 'manual');
   const [recentPresetId, setRecentPresetId] = useState<string | undefined>(dashboardDraft?.recentPresetId);
@@ -421,11 +419,13 @@ export default function Dashboard() {
   const handleCreateTask = async () => {
     const values = await collectionForm.validateFields();
     const videoValues = await videoForm.validateFields();
+    const activePublishConfig = { ...defaultPublishConfig, ...dashboardDraft?.publish, ...publishDraft };
     const created = await createTask.mutateAsync({
       command: command.trim(),
       dryRunDownload: values.useLocalAssets,
       pixivOverrides: buildPixivOverrides(values),
       videoOverrides: videoValues,
+      publishOverrides: buildPublishOverrides(activePublishConfig),
       prefilterMode,
     });
     setSelectedTaskId(created.id);
@@ -482,7 +482,7 @@ export default function Dashboard() {
   const handleApprove = async () => {
     if (!task) return;
     await approveTask.mutateAsync({ taskId: task.id, note: 'Dashboard 审核通过' });
-    message.success('审核通过，已进入 B站 dry-run 发布');
+    message.success('审核通过，正在生成 B站发布包');
   };
 
   const handleReject = async () => {
@@ -648,7 +648,27 @@ export default function Dashboard() {
       );
     }
     if (currentStage.id === 'publish') {
-      return <Alert type="success" showIcon message={task.publish?.message || currentStage.message} description="发布配置已完成 dry-run。" />;
+      return (
+        <Alert
+          type="success"
+          showIcon
+          message={task.publish?.message || currentStage.message}
+          description={
+            task.publish ? (
+              <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                {task.publish.title && <Text strong>{task.publish.title}</Text>}
+                {task.publish.tags && <Text type="secondary">标签：{task.publish.tags.join(' / ')}</Text>}
+                {typeof task.publish.sourceCount === 'number' && <Text type="secondary">来源作品：{task.publish.sourceCount} 个</Text>}
+                {task.publish.packagePath && <Paragraph copyable={{ text: task.publish.packagePath }} ellipsis={{ rows: 1 }}>发布包：{task.publish.packagePath}</Paragraph>}
+                {task.publish.descriptionPath && <Paragraph copyable={{ text: task.publish.descriptionPath }} ellipsis={{ rows: 1 }}>简介：{task.publish.descriptionPath}</Paragraph>}
+                {task.publish.articleMarkdownPath && <Paragraph copyable={{ text: task.publish.articleMarkdownPath }} ellipsis={{ rows: 1 }}>专栏：{task.publish.articleMarkdownPath}</Paragraph>}
+              </Space>
+            ) : (
+              'B站发布包已生成。'
+            )
+          }
+        />
+      );
     }
     return <Text type="secondary">{currentStage.message}</Text>;
   };
@@ -789,7 +809,20 @@ export default function Dashboard() {
                 </Col>
                 <Col xs={12} md={4}>
                   <Form.Item label="运动" name="motion" style={{ marginBottom: 0 }}>
-                    <Select options={[{ label: '无', value: 'none' }, { label: '慢推', value: 'slow_zoom' }, { label: '卡点缩放', value: 'beat_zoom' }]} />
+                    <Select
+                      options={[
+                        { label: '自动轮换', value: 'auto' },
+                        { label: '无', value: 'none' },
+                        { label: '慢推', value: 'slow_zoom' },
+                        { label: '卡点缩放', value: 'beat_zoom' },
+                        { label: '平移推近', value: 'pan_zoom' },
+                        { label: '视差滑动', value: 'slide_parallax' },
+                        { label: '快速切换', value: 'beat_cut' },
+                        { label: '漂移推近', value: 'drift_zoom' },
+                        { label: '电影摇移', value: 'cinematic_sway' },
+                        { label: '脉冲弹入', value: 'pulse_pop' },
+                      ]}
+                    />
                   </Form.Item>
                 </Col>
                 <Col xs={12} md={3}>
@@ -814,6 +847,27 @@ export default function Dashboard() {
                 </Col>
               </Row>
             </Form>
+
+            <Row gutter={12}>
+              <Col xs={24} md={12}>
+                <Alert
+                  type="info"
+                  showIcon
+                  message="视频第一页免责声明已移到视频生成页"
+                  description="进入视频生成页可编辑标题、正文行和停留时间，方便随时增删内容。"
+                  action={<Button size="small" onClick={() => navigate('/video')}>打开视频页</Button>}
+                />
+              </Col>
+              <Col xs={24} md={12}>
+                <Alert
+                  type="success"
+                  showIcon
+                  message={`发布设置：${(publishDraft ?? dashboardDraft?.publish)?.category || defaultPublishConfig.category}`}
+                  description={`标签 ${(publishDraft ?? dashboardDraft?.publish)?.tagText || defaultPublishConfig.tagText}；专栏${(publishDraft ?? dashboardDraft?.publish)?.syncArticle ? '开启' : '关闭'}`}
+                  action={<Button size="small" onClick={() => navigate('/publish')}>编辑发布设置</Button>}
+                />
+              </Col>
+            </Row>
 
             <Space wrap>
               <Button type="primary" icon={<SendOutlined />} loading={createTask.isPending} onClick={handleCreateTask} style={{ background: gold, borderColor: gold }}>
@@ -878,7 +932,7 @@ export default function Dashboard() {
         <Row gutter={[16, 16]}>
           <Col xs={24} md={6}><Card style={{ borderRadius: 8 }}><Statistic title="任务总数" value={stats.total} prefix={<CodeOutlined />} /></Card></Col>
           <Col xs={24} md={6}><Card style={{ borderRadius: 8 }}><Statistic title="待处理" value={stats.waitingReview} prefix={<EyeOutlined />} valueStyle={{ color: '#FA8C16' }} /></Card></Col>
-          <Col xs={24} md={6}><Card style={{ borderRadius: 8 }}><Statistic title="已 dry-run 发布" value={stats.published} prefix={<CheckCircleOutlined />} valueStyle={{ color: '#22C55E' }} /></Card></Col>
+          <Col xs={24} md={6}><Card style={{ borderRadius: 8 }}><Statistic title="已生成发布包" value={stats.published} prefix={<CheckCircleOutlined />} valueStyle={{ color: '#22C55E' }} /></Card></Col>
           <Col xs={24} md={6}><Card style={{ borderRadius: 8 }}><Statistic title="失败/驳回" value={stats.failed} valueStyle={{ color: '#EF4444' }} /></Card></Col>
         </Row>
 

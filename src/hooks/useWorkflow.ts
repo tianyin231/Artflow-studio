@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { workflowApi } from '../services/api/workflow';
-import { WorkflowPixivOverrides, WorkflowPrefilterMode, WorkflowTask, WorkflowVideoOverrides } from '../services/api/types';
+import { WorkflowPixivOverrides, WorkflowPrefilterMode, WorkflowPublishOverrides, WorkflowTask, WorkflowVideoOverrides } from '../services/api/types';
 
 const WORKFLOW_TASKS_KEY = ['workflow', 'tasks'] as const;
 const workflowTaskKey = (taskId?: string) => ['workflow', 'task', taskId] as const;
@@ -49,13 +49,15 @@ export function useCreateWorkflowTask() {
       prefilterMode,
       videoOverrides,
       pixivOverrides,
+      publishOverrides,
     }: {
       command: string;
       dryRunDownload?: boolean;
       prefilterMode?: WorkflowPrefilterMode;
       videoOverrides?: WorkflowVideoOverrides;
       pixivOverrides?: WorkflowPixivOverrides;
-    }) => (await workflowApi.createTask(command, dryRunDownload, videoOverrides, pixivOverrides, prefilterMode)).data.data,
+      publishOverrides?: WorkflowPublishOverrides;
+    }) => (await workflowApi.createTask(command, dryRunDownload, videoOverrides, pixivOverrides, prefilterMode, publishOverrides)).data.data,
     onSuccess: (task) => {
       queryClient.invalidateQueries({ queryKey: WORKFLOW_TASKS_KEY });
       queryClient.setQueryData(workflowTaskKey(task.id), task);

@@ -9,6 +9,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const AiIntegration = lazy(() => import('./pages/AiIntegration'));
 const PixivCollection = lazy(() => import('./pages/PixivCollection'));
 const VideoStudio = lazy(() => import('./pages/VideoStudio'));
+const PublishSettings = lazy(() => import('./pages/PublishSettings'));
 const CommandPresets = lazy(() => import('./pages/CommandPresets'));
 const Config = lazy(() => import('./pages/Config'));
 const Download = lazy(() => import('./pages/Download'));
@@ -73,6 +74,14 @@ export function AppRoutes() {
             element={
               <Suspense fallback={<LoadingSpinner />}>
                 <VideoStudio />
+              </Suspense>
+            }
+          />
+          <Route
+            path="publish"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <PublishSettings />
               </Suspense>
             }
           />

@@ -10,6 +10,7 @@ import {
   FolderOutlined,
   SaveOutlined,
   SearchOutlined,
+  CloudUploadOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
@@ -43,6 +44,11 @@ export default function LayoutSider() {
       key: '/video',
       icon: <VideoCameraOutlined />,
       label: t('layout.videoStudio'),
+    },
+    {
+      key: '/publish',
+      icon: <CloudUploadOutlined />,
+      label: t('layout.publishSettings'),
     },
     {
       key: '/presets',
