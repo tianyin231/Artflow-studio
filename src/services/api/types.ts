@@ -36,6 +36,7 @@ export type WorkflowAction =
   | 'continue_assets_ai_rules'
   | 'approve_cover'
   | 'approve_video'
+  | 'resume_failed'
   | 'reject';
 
 export interface WorkflowStage {
@@ -78,6 +79,7 @@ export interface WorkflowPlan {
     totalDuration?: number;
     bgmPath?: string;
     disclaimer?: WorkflowVideoDisclaimer;
+    effectPlan?: WorkflowVideoEffectPlan;
   };
   publish: {
     platform: 'bilibili';
@@ -108,6 +110,27 @@ export interface WorkflowVideoDisclaimer {
   lines: string[];
 }
 
+export type WorkflowVideoEffectName =
+  | 'slow_zoom'
+  | 'pan_left'
+  | 'pan_right'
+  | 'pan_up'
+  | 'pan_down'
+  | 'drift'
+  | 'sway'
+  | 'pulse';
+
+export interface WorkflowVideoEffectShot {
+  effect: WorkflowVideoEffectName;
+  zoom?: number;
+  intensity?: number;
+}
+
+export interface WorkflowVideoEffectPlan {
+  styleHint?: string;
+  shots: WorkflowVideoEffectShot[];
+}
+
 export interface WorkflowVideoOverrides {
   aspectRatio?: '16:9' | '9:16' | '1:1';
   totalDuration?: number;
@@ -120,6 +143,14 @@ export interface WorkflowVideoOverrides {
   bgmPath?: string;
   style?: 'beat' | 'soft' | 'square';
   disclaimer?: WorkflowVideoDisclaimer;
+}
+
+export interface WorkflowBgmCandidate {
+  path: string;
+  name: string;
+  directory: string;
+  extension: string;
+  size: number;
 }
 
 export interface WorkflowPublishOverrides {
@@ -217,6 +248,11 @@ export interface WorkflowImageAsset {
     profileImageUrls?: Record<string, string>;
   };
   tags?: Array<{ name: string; translated_name?: string }>;
+  publishedAt?: string;
+  bookmarkCount?: number;
+  viewCount?: number;
+  popularityRank?: number;
+  popularityRankScope?: string;
   fileHash?: string;
   status: 'accepted' | 'rejected';
   reason?: string;
@@ -298,6 +334,64 @@ export interface CommandPreset {
   updatedAt: string;
 }
 
+export interface WorkflowSchedulePayload {
+  dryRunDownload?: boolean;
+  videoOverrides?: WorkflowVideoOverrides;
+  pixivOverrides?: WorkflowPixivOverrides;
+  publishOverrides?: WorkflowPublishOverrides;
+}
+
+export interface WorkflowSchedule {
+  id: string;
+  name: string;
+  enabled: boolean;
+  cron: string;
+  timezone?: string;
+  command: string;
+  payload?: WorkflowSchedulePayload;
+  lastTaskId?: string;
+  lastRunAt?: string;
+  lastStatus?: 'success' | 'failed' | 'running';
+  lastError?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PublishJobStatus = 'draft' | 'ready' | 'submitted' | 'failed' | 'cancelled';
+
+export interface PublishJob {
+  id: string;
+  taskId: string;
+  status: PublishJobStatus;
+  platform: 'bilibili';
+  title: string;
+  payload: BilibiliPublishPreview & {
+    packagePath?: string;
+    descriptionPath?: string;
+    articlePath?: string;
+    articleMarkdownPath?: string;
+    createdAt?: string;
+  };
+  result?: BilibiliOpenPlatformPublishResult;
+  error?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BilibiliPublishSettings {
+  clientId?: string;
+  clientSecret?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  configured: boolean;
+  updatedAt?: string;
+}
+
+export interface BilibiliPublishSettingsTestResult {
+  ok: boolean;
+  message: string;
+}
+
 export interface AiIntegrationSettings {
   provider: 'local-rules' | 'openai' | 'anthropic' | 'ollama';
   model: string;
@@ -324,6 +418,13 @@ export interface AiBalanceResult {
   message?: string;
   raw?: unknown;
   errors?: string[];
+}
+
+export interface AiConfigPatchResult {
+  command: string;
+  patch: Partial<ConfigData>;
+  previewConfig: ConfigData;
+  notes: string[];
 }
 
 /**

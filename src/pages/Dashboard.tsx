@@ -39,7 +39,6 @@ import {
 } from '@ant-design/icons';
 import { CSSProperties, useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
-import { useNavigate } from 'react-router-dom';
 import {
   useApproveWorkflowTask,
   useContinueWorkflowAssets,
@@ -47,7 +46,10 @@ import {
   useCreateWorkflowTask,
   useRegenerateWorkflowCover,
   useRejectWorkflowTask,
+  useRerenderWorkflowVideo,
+  useResumeWorkflowTask,
   useUpdateWorkflowAssetStatus,
+  useWorkflowBgmCandidates,
   useWorkflowTask,
   useWorkflowTasks,
 } from '../hooks/useWorkflow';
@@ -124,10 +126,10 @@ const defaultVideoConfig: VideoConfigValues = {
   style: 'beat',
   motion: 'auto',
   maxImages: 12,
-  secondsPerImage: 3,
+  secondsPerImage: 4.5,
   fps: 60,
-  crossfade: 0.18,
-  zoom: 1.08,
+  crossfade: 0.45,
+  zoom: 1.04,
   totalDuration: undefined,
   bgmPath: '',
 };
@@ -168,6 +170,18 @@ function formatBytes(bytes?: number): string {
   if (!bytes) return '-';
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function formatCount(value?: number): string {
+  if (value === undefined || value === null) return '-';
+  if (value >= 10000) return `${(value / 10000).toFixed(value >= 100000 ? 0 : 1)}万`;
+  return String(value);
+}
+
+function formatDateTime(value?: string): string {
+  if (!value) return '-';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
 }
 
 function pickCommandNumber(command: string, patterns: RegExp[]): number | undefined {
@@ -217,10 +231,10 @@ function inferVideoConfig(command: string, current: VideoConfigValues): VideoCon
   if (command.includes('舒缓') || command.includes('柔和') || command.toLowerCase().includes('soft')) {
     next.style = 'soft';
     next.motion = 'drift_zoom';
-    next.secondsPerImage = 4;
+    next.secondsPerImage = 5;
     next.fps = 60;
-    next.crossfade = 0.35;
-    next.zoom = 1.02;
+    next.crossfade = 0.55;
+    next.zoom = 1.015;
   }
   if (command.includes('卡点') || command.includes('电子')) {
     next.style = 'beat';
@@ -269,6 +283,64 @@ function deriveWorkflowRoot(task?: WorkflowTask): string | undefined {
   return artifactPath.slice(0, markerIndex + marker.length + taskId.length);
 }
 
+function deriveRenderProgress(task?: WorkflowTask): number {
+  if (!task) return 0;
+  const renderStage = task.stages.find((stage) => stage.id === 'render');
+  const isRendering = task.status === 'running' && task.currentStage === 'render';
+  if (task.videoPath && !isRendering) return 100;
+
+  const lastRenderStartIndex = task.logs.reduce((latest, log, index) => {
+    return log.message.includes('MoviePy 合成: 正在调用 MoviePy 渲染视频') || log.message.includes('重新生成视频')
+      ? index
+      : latest;
+  }, -1);
+  const currentRenderLogs = lastRenderStartIndex >= 0 ? task.logs.slice(lastRenderStartIndex) : task.logs;
+  const stageProgress = isRendering ? Math.min(renderStage?.progress ?? 0, 99) : renderStage?.progress ?? 0;
+  const logProgress = currentRenderLogs.reduce((latest, log) => {
+    const match = log.message.match(/Render progress:\s*(\d+)%/i) || log.message.match(/(\d+)%/);
+    if (!match) return latest;
+    return Math.max(latest, Math.min(isRendering ? 99 : 100, Number(match[1]) || 0));
+  }, 0);
+
+  return Math.max(stageProgress, logProgress);
+}
+
+function formatTime(value: string): string {
+  return new Date(value).toLocaleTimeString();
+}
+
+function parseAiLog(message: string): { step: string; status: string; detail: string } {
+  const parts = message.split('｜');
+  if (parts[0] === 'AI' && parts.length >= 4) {
+    return {
+      step: parts[1] || 'AI',
+      status: parts[2] || '记录',
+      detail: parts.slice(3).join('｜'),
+    };
+  }
+  if (message.includes('AI Agent')) {
+    const failed = message.includes('失败');
+    return {
+      step: '兼容旧日志',
+      status: failed ? '失败' : '记录',
+      detail: message,
+    };
+  }
+  return { step: 'AI', status: '记录', detail: message };
+}
+
+function isAiRelatedLog(message: string): boolean {
+  return message.startsWith('AI｜') || /\bAI\b|AI Agent|人工智能/i.test(message);
+}
+
+function aiStatusColor(status: string): string {
+  if (status.includes('失败')) return 'error';
+  if (status.includes('无结果') || status.includes('跳过')) return 'warning';
+  if (status.includes('完成')) return 'success';
+  if (status.includes('开始')) return 'processing';
+  return 'default';
+}
+
 function StableAssetImage({
   primarySrc,
   fallbackSrc,
@@ -309,7 +381,6 @@ function StableAssetImage({
 export default function Dashboard() {
   const [collectionForm] = Form.useForm<CollectionConfigValues>();
   const [videoForm] = Form.useForm<VideoConfigValues>();
-  const navigate = useNavigate();
   const selectedTaskId = useWorkflowSelectionStore((state) => state.selectedTaskId);
   const setSelectedTaskId = useWorkflowSelectionStore((state) => state.setSelectedTaskId);
   const dashboardDraft = useWorkflowSelectionStore((state) => state.dashboardDraft);
@@ -327,10 +398,10 @@ export default function Dashboard() {
   const [presetName, setPresetName] = useState('');
   const [draftRevision, setDraftRevision] = useState(0);
   const [coverLayout, setCoverLayout] = useState('grid');
-  const [coverTitle, setCoverTitle] = useState('');
   const [coverAssetNames, setCoverAssetNames] = useState<string[]>([]);
   const { presets, addPresetAsync, isAdding } = useCommandPresets();
   const { tasks, refetch: refetchTasks } = useWorkflowTasks();
+  const { candidates: bgmCandidates, refetch: refetchBgmCandidates, isFetching: isFetchingBgmCandidates } = useWorkflowBgmCandidates();
   const fallbackTask = pickTask(tasks, selectedTaskId);
   const { task: activeTask, refetch: refetchTask } = useWorkflowTask(fallbackTask?.id);
   const createTask = useCreateWorkflowTask();
@@ -340,6 +411,8 @@ export default function Dashboard() {
   const continueAssets = useContinueWorkflowAssets();
   const continueCover = useContinueWorkflowCover();
   const regenerateCover = useRegenerateWorkflowCover();
+  const resumeTask = useResumeWorkflowTask();
+  const rerenderVideo = useRerenderWorkflowVideo();
 
   const task = activeTask ?? fallbackTask;
   const acceptedAssets = task?.assets.filter((asset) => asset.status === 'accepted') ?? [];
@@ -348,6 +421,7 @@ export default function Dashboard() {
   const pipelineProgress = task ? Math.round((completedStages / task.stages.length) * 100) : 0;
   const currentStageId = task?.currentStage ?? task?.stages.find((stage) => stage.status === 'running')?.id ?? task?.stages.find((stage) => stage.status === 'blocked')?.id;
   const currentStage = task?.stages.find((stage) => stage.id === currentStageId);
+  const renderProgress = deriveRenderProgress(task);
   const latestAssetIndex = task?.latestArtifact?.type === 'asset' ? task.latestArtifact.assetIndex : Math.max((task?.assets.length ?? 1) - 1, 0);
   const latestAsset = typeof latestAssetIndex === 'number' ? task?.assets[latestAssetIndex] : undefined;
   const coverPreviewUrl = task?.coverPath ? `/api/workflow/tasks/${task.id}/cover?ts=${encodeURIComponent(task.updatedAt)}` : '';
@@ -378,7 +452,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!task || task.status !== 'cover_review_required') return;
-    setCoverTitle(task.plan?.title ?? task.command);
     setCoverAssetNames((current) => {
       const valid = current.filter((name) => acceptedAssetNames.includes(name));
       return valid.length > 0 ? valid : acceptedAssetNames.slice(0, 4);
@@ -488,7 +561,14 @@ export default function Dashboard() {
   const handleReject = async () => {
     if (!task) return;
     await rejectTask.mutateAsync({ taskId: task.id, note: 'Dashboard 驳回重做' });
-    message.warning('已驳回任务');
+    message.warning(task.status === 'review_required' ? '已驳回并重新生成视频' : '已驳回，可继续调整后重做');
+  };
+
+  const handleRerenderVideo = async () => {
+    if (!task) return;
+    await rerenderVideo.mutateAsync({ taskId: task.id, note: 'Dashboard 手动重新生成视频' });
+    setVideoReviewOpen(false);
+    message.success('已开始重新生成视频');
   };
 
   const handleAssetStatus = async (asset: WorkflowImageAsset, status: 'accepted' | 'rejected') => {
@@ -526,9 +606,14 @@ export default function Dashboard() {
       taskId: task.id,
       assetNames: coverAssetNames,
       layout: coverLayout,
-      title: coverTitle,
     });
     message.success('封面已按当前拼图设置重生成');
+  };
+
+  const handleResumeTask = async () => {
+    if (!task) return;
+    await resumeTask.mutateAsync({ taskId: task.id });
+    message.success('已从失败阶段继续执行');
   };
 
   const getAssetPreviewUrl = (asset: WorkflowImageAsset) =>
@@ -539,6 +624,22 @@ export default function Dashboard() {
 
   const renderStageBubbleBody = () => {
     if (!task || !currentStage) return <Empty description="暂无运行中的任务" />;
+    if (task.status === 'failed') {
+      return (
+        <Space direction="vertical" size={10} style={{ width: '100%' }}>
+          <Text strong>{currentStage.error || currentStage.message || '任务执行失败'}</Text>
+          <Text type="secondary">修复环境或配置后，可以从失败阶段继续执行。</Text>
+          <Space wrap>
+            <Button type="primary" icon={<ReloadOutlined />} loading={resumeTask.isPending} onClick={handleResumeTask}>
+              从失败处继续
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+              刷新状态
+            </Button>
+          </Space>
+        </Space>
+      );
+    }
     if (currentStage.id === 'download') {
       const total = task.plan?.pixivTarget.limit ?? collectionForm.getFieldValue('limit');
       return (
@@ -620,20 +721,33 @@ export default function Dashboard() {
       );
     }
     if (currentStage.id === 'render' || currentStage.id === 'review') {
+      const isRendering = task.status === 'running' && currentStage.id === 'render';
       return (
         <Row gutter={[14, 14]} align="middle">
           <Col xs={24} md={10}>
             <div className="dashboard-bubble-media dashboard-bubble-media-wide">
-              {task.videoPath ? <video src={`/api/workflow/tasks/${task.id}/video`} controls muted /> : <VideoCameraOutlined />}
+              {task.videoPath && !isRendering ? <video src={`/api/workflow/tasks/${task.id}/video`} controls muted /> : <VideoCameraOutlined />}
             </div>
           </Col>
           <Col xs={24} md={14}>
             <Space direction="vertical" size={10} style={{ width: '100%' }}>
-              <Text strong>{task.videoPath ? '视频已生成，等待审核' : currentStage.message}</Text>
-              {task.videoPath && <Paragraph copyable={{ text: task.videoPath }} ellipsis={{ rows: 1 }}>{task.videoPath}</Paragraph>}
+              <Text strong>{isRendering ? currentStage.message : task.videoPath ? '视频已生成，等待审核' : currentStage.message}</Text>
+              {isRendering && (
+                <Progress
+                  percent={renderProgress}
+                  size="small"
+                  status="active"
+                  strokeColor={gold}
+                  format={(percent) => `视频合成 ${percent ?? 0}%`}
+                />
+              )}
+              {task.videoPath && !isRendering && <Paragraph copyable={{ text: task.videoPath }} ellipsis={{ rows: 1 }}>{task.videoPath}</Paragraph>}
               <Space wrap>
                 <Button type="primary" icon={<CheckCircleOutlined />} disabled={!task.availableActions?.includes('approve_video')} loading={approveTask.isPending} onClick={handleApprove} style={{ background: '#22C55E', borderColor: '#22C55E' }}>
                   通过审核
+                </Button>
+                <Button loading={rerenderVideo.isPending} onClick={handleRerenderVideo}>
+                  重新生成视频
                 </Button>
                 <Button disabled={!task.videoPath} onClick={() => setVideoReviewOpen(true)}>
                   展开视频审核
@@ -674,7 +788,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div>
+    <div className="paf-page">
       <Space direction="vertical" size={18} style={{ width: '100%' }}>
         <Card bordered style={{ borderRadius: 8, borderColor: '#EBEBEB' }} bodyStyle={{ padding: 20 }}>
           <Row justify="space-between" align="middle" gutter={[16, 16]}>
@@ -688,7 +802,7 @@ export default function Dashboard() {
               </Space>
             </Col>
             <Col>
-              <Space>
+              <Space wrap>
                 <Button icon={<ReloadOutlined />} onClick={handleRefresh}>刷新</Button>
                 <Badge status={task?.status === 'failed' ? 'error' : task ? 'processing' : 'default'} text={task ? task.status : 'idle'} />
               </Space>
@@ -708,10 +822,10 @@ export default function Dashboard() {
                     placeholder="可输入：本周鸣潮 收藏数500+ 卡点视频。也可以留空，只用表单启动。"
                     rows={5}
                   />
-                  <Space wrap>
+                  <div className="paf-action-group">
                     <Button icon={<RobotOutlined />} onClick={handleParseCommand}>解析指令并填充</Button>
                     <Button icon={<SaveOutlined />} onClick={() => setSavePresetOpen(true)}>保存为预设</Button>
-                  </Space>
+                  </div>
                 </Space>
               </Col>
               <Col xs={24} xl={16}>
@@ -846,35 +960,48 @@ export default function Dashboard() {
                   </Form.Item>
                 </Col>
               </Row>
+              <Row gutter={12} style={{ marginTop: 12 }}>
+                <Col xs={24} md={10}>
+                  <Form.Item label="本地 BGM" style={{ marginBottom: 0 }}>
+                    <Select
+                      allowClear
+                      showSearch
+                      loading={isFetchingBgmCandidates}
+                      placeholder="读取 bgm/、music/、assets/bgm/、assets/music/"
+                      optionFilterProp="label"
+                      value={videoForm.getFieldValue('bgmPath') || undefined}
+                      onChange={(value) => {
+                        videoForm.setFieldValue('bgmPath', value || '');
+                        setDraftRevision((current) => current + 1);
+                      }}
+                      options={bgmCandidates.map((candidate) => ({
+                        label: `${candidate.name} · ${candidate.directory} · ${formatBytes(candidate.size)}`,
+                        value: candidate.path,
+                      }))}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={10}>
+                  <Form.Item label="指定 BGM 路径" name="bgmPath" style={{ marginBottom: 0 }}>
+                    <Input placeholder="可粘贴本地音频绝对路径，优先于 AI 自动选曲" />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={4}>
+                  <Form.Item label=" " style={{ marginBottom: 0 }}>
+                    <Button block icon={<ReloadOutlined />} loading={isFetchingBgmCandidates} onClick={() => refetchBgmCandidates()}>
+                      刷新 BGM
+                    </Button>
+                  </Form.Item>
+                </Col>
+              </Row>
             </Form>
 
-            <Row gutter={12}>
-              <Col xs={24} md={12}>
-                <Alert
-                  type="info"
-                  showIcon
-                  message="视频第一页免责声明已移到视频生成页"
-                  description="进入视频生成页可编辑标题、正文行和停留时间，方便随时增删内容。"
-                  action={<Button size="small" onClick={() => navigate('/video')}>打开视频页</Button>}
-                />
-              </Col>
-              <Col xs={24} md={12}>
-                <Alert
-                  type="success"
-                  showIcon
-                  message={`发布设置：${(publishDraft ?? dashboardDraft?.publish)?.category || defaultPublishConfig.category}`}
-                  description={`标签 ${(publishDraft ?? dashboardDraft?.publish)?.tagText || defaultPublishConfig.tagText}；专栏${(publishDraft ?? dashboardDraft?.publish)?.syncArticle ? '开启' : '关闭'}`}
-                  action={<Button size="small" onClick={() => navigate('/publish')}>编辑发布设置</Button>}
-                />
-              </Col>
-            </Row>
-
-            <Space wrap>
+            <div className="paf-action-group">
               <Button type="primary" icon={<SendOutlined />} loading={createTask.isPending} onClick={handleCreateTask} style={{ background: gold, borderColor: gold }}>
                 按当前参数启动
               </Button>
               <Text type="secondary">手动修改会覆盖解析结果；启动时不会绕过表单。</Text>
-            </Space>
+            </div>
           </Space>
         </Card>
 
@@ -893,6 +1020,24 @@ export default function Dashboard() {
                       </Paragraph>
                       <Text type="secondary">文件浏览页可切换到“工作流产物”查看下载图片、封面、视频和配置。</Text>
                     </Space>
+                  }
+                />
+              )}
+              {task.status === 'failed' && (
+                <Alert
+                  type="error"
+                  showIcon
+                  message="工作流在当前阶段中断"
+                  description="修复依赖、网络或配置后，可直接从失败阶段继续，不会重新执行已完成的管道步骤。"
+                  action={
+                    <Button
+                      type="primary"
+                      icon={<ReloadOutlined />}
+                      loading={resumeTask.isPending}
+                      onClick={handleResumeTask}
+                    >
+                      从失败处继续
+                    </Button>
                   }
                 />
               )}
@@ -929,6 +1074,68 @@ export default function Dashboard() {
           )}
         </Card>
 
+        <Card title="AI 工作流详情" extra={task ? <Tag color="gold">{task.status}</Tag> : null} style={{ borderRadius: 8 }}>
+          {task ? (
+            (() => {
+              const aiLogs = task.logs.filter((log) => isAiRelatedLog(log.message));
+              const visibleLogs = aiLogs.length > 0 ? aiLogs : task.logs.slice(-20);
+              const failedAiLog = aiLogs.find((log) => log.level === 'error');
+              return (
+                <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                  {failedAiLog && (
+                    <Alert
+                      type="error"
+                      showIcon
+                      message="AI 连接或生成失败，流程已停止"
+                      description={parseAiLog(failedAiLog.message).detail}
+                    />
+                  )}
+                  {aiLogs.length === 0 && (
+                    <Alert
+                      type="warning"
+                      showIcon
+                      message="当前任务没有 AI 日志"
+                      description="这通常表示当前选中的是旧任务、后端还没重启到最新代码，或 AI Provider 仍是本地规则。下面显示最近任务日志用于定位。"
+                    />
+                  )}
+                  <List
+                    className="dashboard-ai-log-list"
+                    dataSource={visibleLogs.slice().reverse()}
+                    locale={{ emptyText: '暂无任务日志' }}
+                    renderItem={(log) => {
+                      const parsed = parseAiLog(log.message);
+                      return (
+                        <List.Item style={{ padding: '10px 0' }}>
+                          <List.Item.Meta
+                            avatar={<Badge status={log.level === 'error' ? 'error' : log.level === 'warn' ? 'warning' : 'processing'} />}
+                            title={
+                              <Space wrap size={6}>
+                                <Tag color={aiStatusColor(parsed.status)}>{parsed.status}</Tag>
+                                <Text strong>{parsed.step}</Text>
+                                <Text type="secondary">{formatTime(log.timestamp)}</Text>
+                              </Space>
+                            }
+                            description={
+                              <Paragraph
+                                copyable={parsed.detail.length > 80 ? { text: parsed.detail } : false}
+                                style={{ marginBottom: 0, whiteSpace: 'pre-wrap' }}
+                              >
+                                {parsed.detail}
+                              </Paragraph>
+                            }
+                          />
+                        </List.Item>
+                      );
+                    }}
+                  />
+                </Space>
+              );
+            })()
+          ) : (
+            <Empty description="选择或创建任务后查看 AI 工作流详情" />
+          )}
+        </Card>
+
         <Row gutter={[16, 16]}>
           <Col xs={24} md={6}><Card style={{ borderRadius: 8 }}><Statistic title="任务总数" value={stats.total} prefix={<CodeOutlined />} /></Card></Col>
           <Col xs={24} md={6}><Card style={{ borderRadius: 8 }}><Statistic title="待处理" value={stats.waitingReview} prefix={<EyeOutlined />} valueStyle={{ color: '#FA8C16' }} /></Card></Col>
@@ -944,7 +1151,7 @@ export default function Dashboard() {
                 size="small"
                 dataSource={tasks}
                 pagination={{ pageSize: 5 }}
-                scroll={{ y: 300, x: true }}
+                tableLayout="fixed"
                 onRow={(record) => ({ onClick: () => setSelectedTaskId(record.id), style: { cursor: 'pointer' } })}
                 columns={[
                   {
@@ -953,14 +1160,14 @@ export default function Dashboard() {
                     render: (value: string, record) => (
                       <Space direction="vertical" size={0}>
                         <Text strong>{record.plan?.title ?? value}</Text>
-                        <Text type="secondary" ellipsis style={{ maxWidth: 360 }}>{value}</Text>
+                        <Text type="secondary" ellipsis style={{ maxWidth: 520 }}>{value}</Text>
                       </Space>
                     ),
                   },
-                  { title: '状态', dataIndex: 'status', render: (value: string) => <Tag color={value === 'published' ? 'success' : value === 'failed' ? 'error' : 'processing'}>{value}</Tag> },
-                  { title: '阶段', render: (_, record) => record.stages.find((stage) => stage.id === record.currentStage)?.label ?? '-' },
-                  { title: '素材', render: (_, record) => record.assets.filter((asset) => asset.status === 'accepted').length },
-                  { title: '更新时间', dataIndex: 'updatedAt', render: (value: string) => new Date(value).toLocaleString() },
+                  { title: '状态', dataIndex: 'status', width: 110, render: (value: string) => <Tag color={value === 'published' ? 'success' : value === 'failed' ? 'error' : 'processing'}>{value}</Tag> },
+                  { title: '阶段', width: 110, render: (_, record) => record.stages.find((stage) => stage.id === record.currentStage)?.label ?? '-' },
+                  { title: '素材', width: 80, render: (_, record) => record.assets.filter((asset) => asset.status === 'accepted').length },
+                  { title: '更新时间', dataIndex: 'updatedAt', width: 180, render: (value: string) => new Date(value).toLocaleString() },
                 ]}
               />
             </Card>
@@ -1005,6 +1212,11 @@ export default function Dashboard() {
                     </button>
                     <div>
                       <Text ellipsis={{ tooltip: asset.name }} style={{ display: 'block', fontSize: 12 }}>{asset.name}</Text>
+                      <Space size={4} wrap style={{ marginBottom: 6 }}>
+                        {asset.bookmarkCount !== undefined && <Tag color="gold">收藏 {formatCount(asset.bookmarkCount)}</Tag>}
+                        {asset.popularityRank !== undefined && <Tag color="blue">本批 #{asset.popularityRank}</Tag>}
+                        {asset.publishedAt && <Tag>{formatDateTime(asset.publishedAt)}</Tag>}
+                      </Space>
                       <Space.Compact block>
                         <Button size="small" disabled={asset.status === 'accepted'} loading={updateAssetStatus.isPending} onClick={() => handleAssetStatus(asset, 'accepted')}>通过</Button>
                         <Button size="small" danger disabled={asset.status === 'rejected'} loading={updateAssetStatus.isPending} onClick={() => handleAssetStatus(asset, 'rejected')}>剔除</Button>
@@ -1050,10 +1262,6 @@ export default function Dashboard() {
             </Col>
             <Col xs={24} xl={10}>
               <Space direction="vertical" size={14} style={{ width: '100%' }}>
-                <div>
-                  <Text strong>封面标题</Text>
-                  <Input value={coverTitle} onChange={(event) => setCoverTitle(event.target.value)} style={{ marginTop: 8 }} />
-                </div>
                 <div>
                   <Text strong>拼图布局</Text>
                   <Select
@@ -1131,8 +1339,11 @@ export default function Dashboard() {
               >
                 通过审核
               </Button>
+              <Button loading={rerenderVideo.isPending} onClick={handleRerenderVideo}>
+                重新生成视频
+              </Button>
               <Button danger disabled={!task.availableActions?.includes('reject')} loading={rejectTask.isPending} onClick={handleReject}>
-                驳回重做
+                驳回并重做
               </Button>
             </Space>
           </Space>
@@ -1168,6 +1379,11 @@ export default function Dashboard() {
               <Descriptions.Item label="大小">{formatBytes(previewAsset.size)}</Descriptions.Item>
               <Descriptions.Item label="Pixiv ID">{previewAsset.pixivId ?? '-'}</Descriptions.Item>
               <Descriptions.Item label="作者">{previewAsset.author?.name ?? '-'}</Descriptions.Item>
+              <Descriptions.Item label="发布日期">{formatDateTime(previewAsset.publishedAt)}</Descriptions.Item>
+              <Descriptions.Item label="收藏数">{formatCount(previewAsset.bookmarkCount)}</Descriptions.Item>
+              <Descriptions.Item label="浏览数">{formatCount(previewAsset.viewCount)}</Descriptions.Item>
+              <Descriptions.Item label="本批热度排名">{previewAsset.popularityRank ? `#${previewAsset.popularityRank}` : '-'}</Descriptions.Item>
+              <Descriptions.Item label="排名范围" span={2}>{previewAsset.popularityRankScope ?? '按当前任务素材收藏数排序'}</Descriptions.Item>
               <Descriptions.Item label="状态">{previewAsset.status === 'accepted' ? '通过' : '剔除'}</Descriptions.Item>
               <Descriptions.Item label="原因">{previewAsset.reason ?? '-'}</Descriptions.Item>
             </Descriptions>

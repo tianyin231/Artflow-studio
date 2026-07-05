@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../../../services/api';
 import { QUERY_KEYS } from '../../../constants';
 import { isAuthenticated as checkAuth } from '../../../utils/authUtils';
+import { backendStartingRetryDelay, retryBackendStarting } from '../../../utils/queryRetry';
 
 /**
  * Hook for managing authentication in Layout
@@ -21,7 +22,8 @@ export function useLayoutAuth() {
   const { data: authStatus } = useQuery({
     queryKey: QUERY_KEYS.AUTH_STATUS,
     queryFn: () => api.getAuthStatus(),
-    retry: false,
+    retry: retryBackendStarting,
+    retryDelay: backendStartingRetryDelay,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
@@ -37,17 +39,28 @@ export function useLayoutAuth() {
       // Call logout API to clear token
       await api.logout();
 
+      queryClient.setQueryData(QUERY_KEYS.AUTH_STATUS, {
+        data: {
+          data: {
+            authenticated: false,
+            hasToken: false,
+            tokenValid: false,
+            isAuthenticated: false,
+            user: null,
+          },
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.AUTH_STATUS });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CONFIG });
+
       // Show success message
       message.success(t('layout.logoutSuccess'));
 
-      // Force page reload to ensure clean state. This is more reliable than
-      // clearing query cache and navigating, as it guarantees a fresh start.
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 300); // Reduced delay for faster redirect
+      navigate('/dashboard', { replace: true });
     } catch (error: unknown) {
       console.error('Logout failed:', error);
       message.error(t('layout.logoutFailed'));
+    } finally {
       setIsLoggingOut(false);
     }
   };
@@ -87,4 +100,3 @@ export function useLayoutAuth() {
     handleRefreshToken,
   };
 }
-

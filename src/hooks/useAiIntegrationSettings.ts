@@ -34,6 +34,11 @@ export function useAiIntegrationSettings() {
       (await workflowApi.queryAiBalance(settings)).data.data,
   });
 
+  const configPatchMutation = useMutation({
+    mutationFn: async (command: string) =>
+      (await workflowApi.generateAiConfigPatch(command)).data.data,
+  });
+
   return {
     settings: query.data,
     isLoading: query.isLoading,
@@ -45,5 +50,7 @@ export function useAiIntegrationSettings() {
     isTestingConnection: testMutation.isPending,
     queryBalanceAsync: balanceMutation.mutateAsync,
     isQueryingBalance: balanceMutation.isPending,
+    generateConfigPatchAsync: configPatchMutation.mutateAsync,
+    isGeneratingConfigPatch: configPatchMutation.isPending,
   };
 }

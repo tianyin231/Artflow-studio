@@ -11,6 +11,7 @@ interface LoginStepsProps {
 export function LoginSteps({ current }: LoginStepsProps) {
   return (
     <Steps
+      className="login-steps"
       current={current}
       size="small"
       items={[
@@ -18,8 +19,6 @@ export function LoginSteps({ current }: LoginStepsProps) {
         { title: '认证中', icon: <ThunderboltOutlined /> },
         { title: '完成', icon: <CheckCircleOutlined /> },
       ]}
-      style={{ marginBottom: 8 }}
     />
   );
 }
-

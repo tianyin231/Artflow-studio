@@ -22,8 +22,7 @@ export function useLogin() {
       if (data.refreshToken) {
         message.loading({ content: t('dashboard.gettingAuthCode'), key: 'login-progress', duration: 0 });
         
-        // Wait for backend to save token
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await api.loginWithToken(data.refreshToken, { skipValidation: true });
         
         message.loading({ content: t('dashboard.tokenRefreshing'), key: 'login-progress', duration: 0 });
       }
@@ -107,7 +106,10 @@ export function useLogin() {
         message.info(t('dashboard.openingBrowser'), 3);
         
         // Open login window
-        const result = await window.electron.openLoginWindow();
+        const result = await window.electron.openLoginWindow({
+          useTokenGetter: false,
+          usePuppeteer: true,
+        });
         if (!result.success) {
           if (result.cancelled) {
             // User cancelled, don't show error
@@ -137,4 +139,3 @@ export function useLogin() {
     handleLogin,
   };
 }
-

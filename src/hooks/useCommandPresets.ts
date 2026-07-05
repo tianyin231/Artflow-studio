@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { workflowApi } from '../services/api/workflow';
 import { CommandPreset } from '../services/api/types';
+import { backendStartingRetryDelay, retryBackendStarting } from '../utils/queryRetry';
 
 const COMMAND_PRESETS_KEY = ['workflow', 'command-presets'] as const;
 
@@ -12,6 +13,8 @@ export function useCommandPresets() {
   const query = useQuery({
     queryKey: COMMAND_PRESETS_KEY,
     queryFn: async () => (await workflowApi.listPresets()).data.data,
+    retry: retryBackendStarting,
+    retryDelay: backendStartingRetryDelay,
   });
 
   const presets = query.data ?? [];

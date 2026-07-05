@@ -106,13 +106,13 @@ export function useInteractiveLogin({
           
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          message.loading({ content: '✅ Token 交换成功，正在保存到后端配置...', key: 'login-progress', duration: 0 });
+          message.loading({ content: 'Token 交换成功，正在保存登录凭证...', key: 'login-progress', duration: 0 });
           
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await api.loginWithToken(data.refreshToken, { skipValidation: true });
           
-          message.loading({ content: '✅ Token 已保存，正在验证登录状态...', key: 'login-progress', duration: 0 });
+          message.loading({ content: '登录凭证已保存，正在验证登录状态...', key: 'login-progress', duration: 0 });
         } else {
-          message.loading({ content: '✅ 登录成功，正在验证登录状态...', key: 'login-progress', duration: 0 });
+          message.loading({ content: '登录成功，正在验证登录状态...', key: 'login-progress', duration: 0 });
         }
         
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.AUTH_STATUS });
@@ -122,7 +122,7 @@ export function useInteractiveLogin({
         
         // Check auth status with retries
         let authenticated = false;
-        const maxRetries = 3;
+        const maxRetries = 6;
         
         for (let attempt = 0; attempt < maxRetries; attempt++) {
           try {
@@ -154,13 +154,6 @@ export function useInteractiveLogin({
           
           await new Promise(resolve => setTimeout(resolve, 800));
           window.location.href = '/dashboard';
-        } else if (data.refreshToken) {
-          // 如果有 token 但验证失败，仍然尝试跳转
-          console.warn('[InteractiveLogin] Has token but auth status not confirmed, attempting navigation...');
-          message.warning('登录状态验证失败，但将尝试跳转...', 3);
-          
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          window.location.href = '/dashboard';
         } else {
           console.error('[InteractiveLogin] Authentication not confirmed after retries');
           message.warning('登录成功，但状态验证失败。请手动刷新页面或点击"检查登录状态"按钮。', 4);
@@ -180,7 +173,7 @@ export function useInteractiveLogin({
       isInteractiveLoginActiveRef.current = false;
       
       const errorMessage = error.message || '未知错误';
-      message.error('登录失败: ' + errorMessage, 4);
+      message.error('登录失败: ' + errorMessage + '。可以切换到 Token 登录模式手动粘贴 refreshToken。', 6);
     };
 
     // Register event listeners
@@ -213,7 +206,13 @@ export function useInteractiveLogin({
         isInteractiveLoginActiveRef.current = true;
         startPolling();
         
-        const result = await window.electron.openLoginWindow();
+        const result = await window.electron.openLoginWindow({
+          useTokenGetter: true,
+          usePuppeteer: false,
+          proxy: configData?.data?.data?.network?.proxy?.enabled
+            ? configData.data.data.network.proxy
+            : undefined,
+        });
         if (!result.success) {
           if (result.cancelled) {
             stopPolling();
@@ -301,4 +300,3 @@ export function useInteractiveLogin({
     isActive: isInteractiveLoginActiveRef.current,
   };
 }
-

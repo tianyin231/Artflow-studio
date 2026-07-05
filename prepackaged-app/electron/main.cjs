@@ -1902,7 +1902,7 @@ function setupIpcHandlers() {
       // 设置标志位，防止重复调用
       isOpeningLoginWindow = true;
       
-      const useTokenGetter = options.useTokenGetter !== false && pixivTokenGetter !== null; // 默认优先使用 pixiv-token-getter（如果可用）
+      const useTokenGetter = options.useTokenGetter === true && pixivTokenGetter !== null; // 默认禁用，避免失败后自动弹第二个登录窗口
       const usePuppeteer = options.usePuppeteer !== false && puppeteer !== null; // 默认使用 Puppeteer（如果可用）
       const proxyConfig = options.proxy || null;
       
@@ -2384,4 +2384,3 @@ app.on('before-quit', () => {
 
 // 处理协议（可选：自定义协议如 pixivflow://）
 app.setAsDefaultProtocolClient('pixivflow');
-

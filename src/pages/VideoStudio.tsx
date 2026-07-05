@@ -37,6 +37,8 @@ import {
   useContinueWorkflowCover,
   useCreateWorkflowTask,
   useRejectWorkflowTask,
+  useRerenderWorkflowVideo,
+  useResumeWorkflowTask,
   useUpdateWorkflowAssetStatus,
   useWorkflowTask,
   useWorkflowTasks,
@@ -79,11 +81,11 @@ const defaultVideoConfig: Required<
 > &
   Pick<WorkflowVideoOverrides, 'bgmPath'> = {
   aspectRatio: '16:9',
-  totalDuration: 36,
+  totalDuration: 50,
   maxImages: 10,
   fps: 60,
-  crossfade: 0.25,
-  zoom: 1.06,
+  crossfade: 0.45,
+  zoom: 1.04,
   motion: 'auto',
   style: 'beat',
   bgmPath: '',
@@ -121,16 +123,16 @@ function inferVideoConfig(command: string): typeof defaultVideoConfig {
   if (command.includes('舒缓') || command.includes('柔和')) {
     next.style = 'soft';
     next.motion = 'drift_zoom';
-    next.totalDuration = 42;
+    next.totalDuration = 55;
     next.fps = 60;
-    next.crossfade = 0.35;
-    next.zoom = 1.02;
+    next.crossfade = 0.55;
+    next.zoom = 1.015;
   }
   if (command.includes('卡点') || command.includes('快节奏')) {
     next.style = 'beat';
     next.motion = 'beat_zoom';
-    next.crossfade = 0.18;
-    next.zoom = 1.08;
+    next.crossfade = 0.45;
+    next.zoom = 1.04;
   }
 
   const durationMatch = command.match(/(?:时长|总时长)\s*(\d+)\s*(?:秒|s)?/i);
@@ -168,6 +170,8 @@ export default function VideoStudio() {
   const updateAssetStatus = useUpdateWorkflowAssetStatus();
   const continueAssets = useContinueWorkflowAssets();
   const continueCover = useContinueWorkflowCover();
+  const resumeTask = useResumeWorkflowTask();
+  const rerenderVideo = useRerenderWorkflowVideo();
 
   const task = activeTask ?? fallbackTask;
   const previewAspectRatio = getPreviewAspectRatio(task);
@@ -231,7 +235,13 @@ export default function VideoStudio() {
   const handleReject = async () => {
     if (!task) return;
     await rejectTask.mutateAsync({ taskId: task.id, note: '视频生成页驳回' });
-    message.warning('已驳回任务');
+    message.warning(task.status === 'review_required' ? '已驳回并重新生成视频' : '已驳回，可继续调整后重做');
+  };
+
+  const handleRerenderVideo = async () => {
+    if (!task) return;
+    await rerenderVideo.mutateAsync({ taskId: task.id, note: '视频生成页手动重新生成视频' });
+    message.success('已开始重新生成视频');
   };
 
   const handleAssetStatus = async (asset: WorkflowImageAsset, status: 'accepted' | 'rejected') => {
@@ -254,6 +264,12 @@ export default function VideoStudio() {
     if (!task) return;
     await continueCover.mutateAsync({ taskId: task.id });
     message.success('封面已确认，开始视频生成');
+  };
+
+  const handleResumeTask = async () => {
+    if (!task) return;
+    await resumeTask.mutateAsync({ taskId: task.id });
+    message.success('已从失败阶段继续执行');
   };
 
   const handleCopyPath = async () => {
@@ -509,8 +525,27 @@ export default function VideoStudio() {
             styles={{ header: { minHeight: 44 }, body: { padding: 16 } }}
           >
             {task ? (
-              <Tabs
-                items={[
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                {task.status === 'failed' && (
+                  <Alert
+                    type="error"
+                    showIcon
+                    message="工作流执行失败"
+                    description="修复环境或配置后，可以从失败阶段继续，不需要重新抓取和审核已完成的素材。"
+                    action={
+                      <Button
+                        type="primary"
+                        icon={<ReloadOutlined />}
+                        loading={resumeTask.isPending}
+                        onClick={handleResumeTask}
+                      >
+                        从失败处继续
+                      </Button>
+                    }
+                  />
+                )}
+                <Tabs
+                  items={[
                   {
                     key: 'assets',
                     label: '素材预审核',
@@ -718,6 +753,16 @@ export default function VideoStudio() {
                               </Paragraph>
                             )}
                             <Space wrap>
+                              {task.status === 'failed' && (
+                                <Button
+                                  type="primary"
+                                  icon={<ReloadOutlined />}
+                                  loading={resumeTask.isPending}
+                                  onClick={handleResumeTask}
+                                >
+                                  从失败处继续
+                                </Button>
+                              )}
                               <Button
                                 type="primary"
                                 icon={<CheckCircleOutlined />}
@@ -729,7 +774,10 @@ export default function VideoStudio() {
                                 通过审核
                               </Button>
                               <Button danger disabled={task.status !== 'review_required'} loading={rejectTask.isPending} onClick={handleReject}>
-                                驳回
+                                驳回并重做
+                              </Button>
+                              <Button disabled={!task.videoPath} loading={rerenderVideo.isPending} onClick={handleRerenderVideo}>
+                                重新生成视频
                               </Button>
                               <Button icon={<CopyOutlined />} disabled={!task.videoPath} onClick={handleCopyPath}>
                                 复制路径
@@ -757,8 +805,9 @@ export default function VideoStudio() {
                       </Row>
                     ),
                   },
-                ]}
-              />
+                  ]}
+                />
+              </Space>
             ) : (
               <Empty description="暂无视频任务" />
             )}

@@ -42,9 +42,10 @@ export const authApi = {
    * @param refreshToken - Refresh token to validate and save
    */
   loginWithToken: (
-    refreshToken: string
+    refreshToken: string,
+    options?: { skipValidation?: boolean }
   ): Promise<AxiosResponse<ApiResponse<AuthLoginResponse>>> =>
-    apiClient.post('/auth/login-with-token', { refreshToken }),
+    apiClient.post('/auth/login-with-token', { refreshToken, ...options }),
 
   /**
    * Refresh authentication token
@@ -73,4 +74,3 @@ export const authApi = {
   logout: (): Promise<AxiosResponse<ApiResponse<void>>> =>
     apiClient.post('/auth/logout'),
 };
-

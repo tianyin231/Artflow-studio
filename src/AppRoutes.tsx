@@ -7,9 +7,10 @@ import { LoadingSpinner } from './components/common/LoadingSpinner';
 // Lazy load page components for code splitting
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const AiIntegration = lazy(() => import('./pages/AiIntegration'));
+const WorkflowSchedules = lazy(() => import('./pages/WorkflowSchedules'));
 const PixivCollection = lazy(() => import('./pages/PixivCollection'));
 const VideoStudio = lazy(() => import('./pages/VideoStudio'));
-const PublishSettings = lazy(() => import('./pages/PublishSettings'));
+const PublishJobs = lazy(() => import('./pages/PublishJobs'));
 const CommandPresets = lazy(() => import('./pages/CommandPresets'));
 const Config = lazy(() => import('./pages/Config'));
 const Download = lazy(() => import('./pages/Download'));
@@ -62,6 +63,14 @@ export function AppRoutes() {
             }
           />
           <Route
+            path="schedules"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <WorkflowSchedules />
+              </Suspense>
+            }
+          />
+          <Route
             path="collection"
             element={
               <Suspense fallback={<LoadingSpinner />}>
@@ -81,7 +90,7 @@ export function AppRoutes() {
             path="publish"
             element={
               <Suspense fallback={<LoadingSpinner />}>
-                <PublishSettings />
+                <PublishJobs />
               </Suspense>
             }
           />

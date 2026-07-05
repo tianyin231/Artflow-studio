@@ -50,7 +50,7 @@ export function LoginForm({
         <Form.Item
           name="refreshToken"
           label={
-            <span style={{ fontSize: '14px', fontWeight: 500 }}>
+            <span className="login-field-label">
               <KeyOutlined style={{ marginRight: 8 }} /> Refresh Token
             </span>
           }
@@ -60,9 +60,10 @@ export function LoginForm({
           ]}
         >
           <Input.TextArea
-            placeholder="粘贴您的 refreshToken  here..."
+            placeholder="粘贴您的 refreshToken"
             autoSize={{ minRows: 3, maxRows: 6 }}
-            style={{ fontSize: '14px', fontFamily: 'monospace' }}
+            className="login-token-input"
+            disabled={isLoading}
           />
         </Form.Item>
       )}
@@ -74,17 +75,10 @@ export function LoginForm({
           block
           icon={<LoginOutlined />}
           loading={isLoading}
+          disabled={isLoading}
           size="large"
           onClick={handleSubmit}
-          style={{
-            height: '48px',
-            fontSize: '16px',
-            fontWeight: 600,
-            borderRadius: '8px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            border: 'none',
-            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
-          }}
+          className="login-submit-button"
         >
           {isLoading ? t('login.loggingIn') : t('login.loginButton')}
         </Button>
@@ -92,39 +86,30 @@ export function LoginForm({
 
       {isLoading && (
         <Alert
+          className="login-progress-alert"
           message={
             <span style={{ fontWeight: 600 }}>
               {t('login.processing')}
             </span>
           }
           description={
-            <div style={{ fontSize: '13px', lineHeight: '1.6' }}>
+            <div className="login-alert-description">
               {loginMode === 'interactive' ? (
                 <div>
-                  <div style={{ marginBottom: 12, color: 'rgba(0, 0, 0, 0.65)' }}>
+                  <div>
                     {t('login.processingInteractiveDesc')}
                   </div>
                   {onCheckStatus && (
-                    <div style={{ 
-                      padding: '12px', 
-                      background: 'rgba(24, 144, 255, 0.08)', 
-                      borderRadius: '8px',
-                      borderLeft: '3px solid #1890ff',
-                      marginTop: 12,
-                    }}>
-                      <div style={{ marginBottom: 10, color: 'rgba(0, 0, 0, 0.65)' }}>
-                        <strong style={{ color: '#1890ff' }}>💡 提示：</strong>如果您已经在浏览器中完成登录，请点击下方按钮检查登录状态。
+                    <div className="login-check-status">
+                      <div>
+                        <strong>提示：</strong>如果您已经在浏览器中完成登录，请点击下方按钮检查登录状态。
                       </div>
                       <Button
                         type="primary"
                         size="small"
                         icon={<ReloadOutlined />}
                         onClick={onCheckStatus}
-                        style={{ 
-                          width: '100%',
-                          height: '32px',
-                          borderRadius: '6px',
-                        }}
+                        className="login-check-status-button"
                       >
                         检查登录状态
                       </Button>
@@ -132,21 +117,16 @@ export function LoginForm({
                   )}
                 </div>
               ) : loginMode === 'token' ? (
-                <div style={{ color: 'rgba(0, 0, 0, 0.65)' }}>
-                  正在验证 refreshToken 并保存到配置文件...
+                <div>
+                  正在保存 refreshToken 到配置文件...
                 </div>
               ) : null}
             </div>
           }
           type="info"
           showIcon
-          style={{ 
-            marginTop: 0,
-            borderRadius: '8px',
-          }}
         />
       )}
     </Form>
   );
 }
-

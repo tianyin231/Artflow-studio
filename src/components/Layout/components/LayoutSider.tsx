@@ -12,6 +12,7 @@ import {
   SearchOutlined,
   CloudUploadOutlined,
   VideoCameraOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -34,6 +35,11 @@ export default function LayoutSider() {
       key: '/ai',
       icon: <ApiOutlined />,
       label: t('layout.aiIntegration'),
+    },
+    {
+      key: '/schedules',
+      icon: <ClockCircleOutlined />,
+      label: t('layout.workflowSchedules'),
     },
     {
       key: '/collection',

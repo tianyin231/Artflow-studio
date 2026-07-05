@@ -28,7 +28,7 @@ contextBridge.exposeInMainWorld('electron', {
   },
 
   // 登录相关
-  openLoginWindow: () => ipcRenderer.invoke('open-login-window'),
+  openLoginWindow: (options = {}) => ipcRenderer.invoke('open-login-window', options),
   closeLoginWindow: () => ipcRenderer.invoke('close-login-window'),
   onLoginSuccess: (callback) => {
     const handler = (event, data) => callback(data);
@@ -61,5 +61,4 @@ contextBridge.exposeInMainWorld('electronAPI', {
     electron: process.versions.electron,
   },
 });
-
 

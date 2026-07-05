@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { QUERY_KEYS } from '../constants';
 import { isAuthenticated as checkAuth } from '../utils/authUtils';
+import { backendStartingRetryDelay, retryBackendStarting } from '../utils/queryRetry';
 
 /**
  * Hook to check authentication status and handle login operations
@@ -15,7 +16,8 @@ export function useAuth() {
   const { data, isLoading, isError } = useQuery({
     queryKey: QUERY_KEYS.AUTH_STATUS,
     queryFn: () => api.getAuthStatus(),
-    retry: false,
+    retry: retryBackendStarting,
+    retryDelay: backendStartingRetryDelay,
     staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: false,

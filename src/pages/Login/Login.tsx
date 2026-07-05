@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Space, Spin, Divider, Typography } from 'antd';
+import { Space, Spin, Divider, Typography, Button } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useLoginFlow } from './hooks';
 import {
@@ -43,15 +43,7 @@ export default function Login() {
   // Show loading while checking auth status
   if (authStatusLoading) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        }}
-      >
+      <div className="login-auth-loading">
         <Spin size="large" />
       </div>
     );
@@ -59,8 +51,12 @@ export default function Login() {
 
   return (
     <LoginCard>
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space direction="vertical" size={18} style={{ width: '100%' }}>
         <LoginHeader />
+
+        <Button type="link" onClick={() => navigate('/dashboard', { replace: true })}>
+          返回主界面
+        </Button>
 
         {(isLoggingIn || isLoggingInWithToken) && (
           <LoginSteps current={loginStep} />
@@ -70,7 +66,7 @@ export default function Login() {
           <LoginFeatures />
         )}
 
-        <Divider style={{ margin: '8px 0' }} />
+        <Divider className="login-divider" />
 
         <LoginModeSelector
           value={loginMode}
@@ -91,16 +87,12 @@ export default function Login() {
           onCheckStatus={handleCheckStatus}
         />
 
-        <Divider style={{ margin: '8px 0' }} />
+        <Divider className="login-divider" />
 
         <div style={{ textAlign: 'center' }}>
           <Paragraph 
             type="secondary" 
-            style={{ 
-              fontSize: '12px', 
-              margin: '0 0 12px 0',
-              lineHeight: '1.6',
-            }}
+            className="login-note"
           >
             {t('login.note')}
           </Paragraph>
@@ -109,4 +101,3 @@ export default function Login() {
     </LoginCard>
   );
 }
-

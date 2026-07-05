@@ -28,7 +28,8 @@ import {
   SaveOutlined,
 } from '@ant-design/icons';
 import { useAiIntegrationSettings } from '../hooks/useAiIntegrationSettings';
-import { AiBalanceResult, AiConnectionTestResult, AiIntegrationSettings, AiModelInfo } from '../services/api/types';
+import { AiBalanceResult, AiConfigPatchResult, AiConnectionTestResult, AiIntegrationSettings, AiModelInfo } from '../services/api/types';
+import { configApi } from '../services/api/config';
 
 const { Text, Title } = Typography;
 
@@ -52,10 +53,15 @@ export default function AiIntegration() {
     isTestingConnection,
     queryBalanceAsync,
     isQueryingBalance,
+    generateConfigPatchAsync,
+    isGeneratingConfigPatch,
   } = useAiIntegrationSettings();
   const [models, setModels] = useState<AiModelInfo[]>([]);
   const [testResult, setTestResult] = useState<AiConnectionTestResult | null>(null);
   const [balanceResult, setBalanceResult] = useState<AiBalanceResult | null>(null);
+  const [configCommand, setConfigCommand] = useState('');
+  const [configPatchResult, setConfigPatchResult] = useState<AiConfigPatchResult | null>(null);
+  const [isApplyingConfig, setIsApplyingConfig] = useState(false);
   const config = settings ?? defaultConfig;
 
   useEffect(() => {
@@ -86,7 +92,12 @@ export default function AiIntegration() {
 
   const handleSave = async (values: AiIntegrationSettings) => {
     try {
-      await saveSettingsAsync(values);
+      const normalizedValues = {
+        ...values,
+        planningMode: values.provider === 'local-rules' ? 'rules-first' : 'ai-first',
+      } as AiIntegrationSettings;
+      await saveSettingsAsync(normalizedValues);
+      form.setFieldsValue(normalizedValues);
       message.success('AI 接入配置已保存');
     } catch (error) {
       message.error(error instanceof Error ? error.message : '保存失败');
@@ -134,6 +145,33 @@ export default function AiIntegration() {
     } catch (error) {
       setBalanceResult({ supported: false, message: error instanceof Error ? error.message : '余额查询失败' });
       message.error(error instanceof Error ? error.message : '余额查询失败');
+    }
+  };
+
+  const handleGenerateConfigPatch = async () => {
+    if (!configCommand.trim()) {
+      message.warning('请输入配置修改要求');
+      return;
+    }
+    try {
+      const result = await generateConfigPatchAsync(configCommand.trim());
+      setConfigPatchResult(result);
+      message.success('AI 配置变更已生成，请确认后保存');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '生成配置变更失败');
+    }
+  };
+
+  const handleApplyConfigPatch = async () => {
+    if (!configPatchResult) return;
+    setIsApplyingConfig(true);
+    try {
+      await configApi.updateConfig(configPatchResult.previewConfig);
+      message.success('配置已保存');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '保存配置失败');
+    } finally {
+      setIsApplyingConfig(false);
     }
   };
 
@@ -192,7 +230,13 @@ export default function AiIntegration() {
               <Row gutter={16}>
                 <Col xs={24} md={12}>
                   <Form.Item label="Provider" name="provider" rules={[{ required: true }]}>
-                    <Select options={providerOptions} onChange={() => setModels([])} />
+                    <Select
+                      options={providerOptions}
+                      onChange={(provider) => {
+                        setModels([]);
+                        form.setFieldValue('planningMode', provider === 'local-rules' ? 'rules-first' : 'ai-first');
+                      }}
+                    />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
@@ -297,6 +341,55 @@ export default function AiIntegration() {
             </Col>
           ))}
         </Row>
+      </Card>
+
+      <Card title="AI 配置生成">
+        <Space direction="vertical" size={12} style={{ width: '100%' }}>
+          <Input.TextArea
+            rows={4}
+            value={configCommand}
+            onChange={(event) => setConfigCommand(event.target.value)}
+            placeholder="例如：启用每天凌晨 3 点定时任务，下载并发改为 1，请求间隔 1200ms，只抓取最近 30 天鸣潮收藏 5000+ 的插画"
+          />
+          <Space wrap>
+            <Button loading={isGeneratingConfigPatch} onClick={handleGenerateConfigPatch}>
+              生成配置变更
+            </Button>
+            <Button type="primary" disabled={!configPatchResult} loading={isApplyingConfig} onClick={handleApplyConfigPatch}>
+              确认保存配置
+            </Button>
+          </Space>
+          {configPatchResult && (
+            <Row gutter={[16, 16]}>
+              <Col xs={24} lg={12}>
+                <Card size="small" title="Patch">
+                  <Input.TextArea
+                    readOnly
+                    autoSize={{ minRows: 8, maxRows: 16 }}
+                    value={JSON.stringify(configPatchResult.patch, null, 2)}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} lg={12}>
+                <Card size="small" title="预览配置">
+                  <Input.TextArea
+                    readOnly
+                    autoSize={{ minRows: 8, maxRows: 16 }}
+                    value={JSON.stringify(configPatchResult.previewConfig, null, 2)}
+                  />
+                </Card>
+              </Col>
+            </Row>
+          )}
+          {configPatchResult?.notes?.length ? (
+            <Alert
+              type="info"
+              showIcon
+              message="AI 说明"
+              description={configPatchResult.notes.join('；')}
+            />
+          ) : null}
+        </Space>
       </Card>
     </Space>
   );

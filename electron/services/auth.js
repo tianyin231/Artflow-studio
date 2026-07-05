@@ -289,7 +289,8 @@ class AuthService {
       this.puppeteerBrowser = browser; // 保存浏览器实例以便后续关闭
       safeLog('✅ 浏览器已启动');
       
-      const page = await browser.newPage();
+      const pages = await browser.pages();
+      const page = pages[0] || await browser.newPage();
       
       // 设置 User-Agent
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');

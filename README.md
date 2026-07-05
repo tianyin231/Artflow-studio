@@ -1,10 +1,10 @@
-# PixivFlow WebUI Frontend
+# Artflow-studio
 
-PixivFlow 的现代化、响应式 Web 界面 - 强大的 Pixiv 内容下载器。
+Artflow 的 Web 工作台，用于管理 Pixiv 素材抓取、AI 工作流、视频生成、BGM、定时任务和发布任务。
 
 > **English Version**: See [README_EN.md](./README_EN.md) for the English translation.
 
-**独立前端项目**：这是一个独立的前端项目，与后端完全分离。后端 API 服务器是独立的 npm 包，可以通过 HTTP API 与前端通信。
+**独立前端项目**：这是一个独立的前端项目，与后端完全分离。后端 API 由 **Artflow-core** 提供，前端通过 HTTP API 与后端通信。
 
 ## 📊 平台支持状态
 
@@ -31,6 +31,11 @@ PixivFlow 的现代化、响应式 Web 界面 - 强大的 Pixiv 内容下载器�
 
 - **现代化 UI**：基于 Ant Design 构建的简洁直观界面
 - **URL 直接下载**：无需配置，通过 URL 或作品 ID 直接下载
+- **AI 工作流仪表盘**：在仪表盘创建自然语言任务，查看 AI 规划、BGM 选择、镜头配方、发布文案等日志
+- **视频生成工作台**：支持素材预过滤、封面确认、视频审核、重生成、作者/Pixiv 来源信息展示
+- **BGM 配置**：支持读取本地 BGM 候选、手动指定本地音频路径，也可交给后端 AI/联网流程尝试选择
+- **发布任务**：工作流生成 B站发布包后进入发布任务列表；真实提交需要后端配置 B站开放平台凭证
+- **定时工作流**：支持保存定时任务并由后端按计划创建工作流
 - **国际化支持**：完整支持英文和中文
 - **响应式设计**：在桌面、平板和移动设备上完美运行
 - **实时更新**：实时下载进度和状态更新
@@ -54,7 +59,7 @@ PixivFlow 的现代化、响应式 Web 界面 - 强大的 Pixiv 内容下载器�
 ## 项目结构
 
 ```
-pixivflow-webui/
+artflow-studio/
 ├── src/
 │   ├── components/          # React 组件
 │   ├── pages/              # 页面组件
@@ -75,11 +80,13 @@ pixivflow-webui/
 ### 前置要求
 
 - Node.js 18+ 和 npm
-- 运行中的后端 API 服务器（需要先安装并启动后端：`npm install -g pixivflow && pixivflow webui`）
+- 运行中的 Artflow-core 后端 API 服务器（通常在后端仓库执行 `npm run webui`）
 
-### Artflow 私有部署说明
+### 部署说明
 
-本仓库是基于 PixivFlow WebUI 的私有二次开发前端，当前作为 **Artflow-studio** 使用。后端项目位于独立仓库 **Artflow-core**，前端通过 HTTP API 连接后端。
+本仓库是 **Artflow-studio** 前端。后端项目位于独立仓库 **Artflow-core**，前端通过 HTTP API 连接后端。
+
+项目来源：本项目基于原 WebUI 进行二次开发，当前使用和维护均以 Artflow 为准。
 
 在新电脑上部署前端：
 
@@ -109,7 +116,11 @@ npm run webui
 VITE_DEV_API_PORT=3000 npm run dev
 ```
 
-生产构建产物位于 `dist/`，可以部署到静态文件服务器。生产环境 API 地址可通过 `VITE_API_URL` 配置。
+生产构建产物位于 `dist/`，可以部署到静态文件服务器。生产环境 API 地址可通过 `VITE_API_BASE_URL` 配置，例如：
+
+```bash
+VITE_API_BASE_URL=http://localhost:3000 npm run build
+```
 
 不要提交这些本地运行文件：
 
@@ -125,8 +136,8 @@ VITE_DEV_API_PORT=3000 npm run dev
 
 1. 克隆仓库：
 ```bash
-git clone https://github.com/zoidberg-xgd/pixivflow-webui.git
-cd pixivflow-webui
+git clone https://github.com/tianyin231/Artflow-studio.git
+cd Artflow-studio
 ```
 
 2. 安装依赖：
@@ -152,8 +163,15 @@ npm run build
 ### 与后端集成
 
 前端通过 HTTP API 与后端通信。默认情况下：
-- 开发模式：连接到 `http://localhost:3001`（可通过 `VITE_DEV_API_PORT` 环境变量配置）
-- 生产模式：连接到当前域名（可通过 `VITE_API_URL` 环境变量配置）
+- 开发模式：通过 Vite 代理连接到 `http://localhost:3000`（可通过 `VITE_DEV_API_PORT` 环境变量配置）
+- 生产模式：默认连接当前域名下的 `/api`，也可通过 `VITE_API_BASE_URL` 指定后端地址
+
+当前真实能力边界：
+
+- Web UI 是主要可用入口；Electron、Android、iOS 相关代码仍在开发中，不建议作为稳定发布目标。
+- AI 工作流依赖后端已配置 OpenAI 兼容模型；AI 失败时后端会停止任务并在仪表盘显示日志。
+- B站发布功能支持生成发布包和开放平台视频投稿；专栏同步仍未完整接入。
+- 本地 BGM 只读取后端运行目录下的 `bgm/`、`music/`、`assets/bgm/`、`assets/music/`，也可以直接填写后端可访问的绝对路径。
 
 更多开发相关的信息，请参阅 [开发指南](./docs/DEVELOPMENT_GUIDE.md)。
 
@@ -161,7 +179,7 @@ npm run build
 
 > ⚠️ **重要提示**：Android 和 iOS 应用功能目前**尚未实现**，仍在开发中。以下文档仅供参考，实际功能可能不完整或存在已知问题。
 
-PixivFlow 计划支持构建为 Android 和 iOS 原生应用，但目前仍在开发中。
+Artflow-studio 保留了移动端相关工程结构，但 Android 和 iOS 应用目前仍在开发中。
 
 ### Android 应用方案
 

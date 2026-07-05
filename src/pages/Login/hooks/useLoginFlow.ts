@@ -7,6 +7,7 @@ import { api } from '../../../services/api';
 import { translateErrorCode, extractErrorInfo } from '../../../utils/errorCodeTranslator';
 import { QUERY_KEYS } from '../../../constants';
 import { isAuthenticated } from '../../../utils/authUtils';
+import { backendStartingRetryDelay, retryBackendStarting } from '../../../utils/queryRetry';
 import { useAuth } from '../../../hooks/useAuth';
 import { useLoginPolling } from '../../../hooks/useLoginPolling';
 import { useInteractiveLogin } from '../../../hooks/useInteractiveLogin';
@@ -26,7 +27,8 @@ export function useLoginFlow() {
   const { data: authStatus, isLoading: authStatusLoading, refetch: refetchAuthStatus } = useQuery({
     queryKey: QUERY_KEYS.AUTH_STATUS,
     queryFn: () => api.getAuthStatus(),
-    retry: false,
+    retry: retryBackendStarting,
+    retryDelay: backendStartingRetryDelay,
     staleTime: 0, // No cache - always fetch fresh data
     refetchOnMount: true, // Always refetch when component mounts
     refetchInterval: false,
@@ -56,7 +58,7 @@ export function useLoginFlow() {
     setPollingEnabled(false);
     setLoginStep(2);
     
-    message.loading({ content: '✅ 登录成功，正在验证登录状态...', key: 'login-success', duration: 0 });
+    message.loading({ content: '登录成功，正在验证登录状态...', key: 'login-success', duration: 0 });
     
     // Wait for backend config to refresh
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -90,7 +92,7 @@ export function useLoginFlow() {
     
     if (authenticated) {
       console.log('[Login] Authentication confirmed, navigating to dashboard...');
-      message.success('✅ 登录成功！正在跳转到 Dashboard...', 2);
+      message.success('登录成功，正在跳转到 Dashboard...', 2);
       
       await new Promise(resolve => setTimeout(resolve, 800));
       window.location.href = '/dashboard';
@@ -210,4 +212,3 @@ export function useLoginFlow() {
     navigate,
   };
 }
-

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
 import { QUERY_KEYS } from '../constants';
 import { isAuthenticated } from '../utils/authUtils';
+import { backendStartingRetryDelay, retryBackendStarting } from '../utils/queryRetry';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -20,7 +21,8 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { data, isLoading, isError } = useQuery({
     queryKey: QUERY_KEYS.AUTH_STATUS,
     queryFn: () => api.getAuthStatus(),
-    retry: false,
+    retry: retryBackendStarting,
+    retryDelay: backendStartingRetryDelay,
     staleTime: 0, // No cache - always fetch fresh data
     refetchOnMount: true, // Always refetch when component mounts
     refetchOnWindowFocus: false, // Don't refetch on window focus to avoid unnecessary requests
@@ -71,4 +73,3 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     </>
   );
 }
-

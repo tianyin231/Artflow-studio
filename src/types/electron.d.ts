@@ -7,7 +7,7 @@ export interface ElectronAPI {
    * Open login window in system browser
    * @returns Promise resolving to login result
    */
-  openLoginWindow: () => Promise<{
+  openLoginWindow: (options?: ElectronLoginOptions) => Promise<{
     success: boolean;
     cancelled?: boolean;
     error?: string;
@@ -28,6 +28,19 @@ export interface ElectronAPI {
    * @returns Cleanup function to remove listener
    */
   onLoginError: (callback: (error: ElectronLoginError) => void) => () => void;
+}
+
+export interface ElectronLoginOptions {
+  useTokenGetter?: boolean;
+  usePuppeteer?: boolean;
+  proxy?: {
+    enabled?: boolean;
+    host?: string;
+    port?: number;
+    protocol?: string;
+    username?: string;
+    password?: string;
+  };
 }
 
 /**
@@ -63,4 +76,3 @@ declare global {
 }
 
 export {};
-
