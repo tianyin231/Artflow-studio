@@ -86,7 +86,7 @@ artflow-studio/
 
 本仓库是 **Artflow-studio** 前端。后端项目位于独立仓库 **Artflow-core**，前端通过 HTTP API 连接后端。
 
-项目来源：本项目基于原 WebUI 进行二次开发，当前使用和维护均以 Artflow 为准。
+项目来源：本项目基于 PixivFlow WebUI 进行二次开发，当前使用和维护均以 Artflow 为准。
 
 在新电脑上部署前端：
 
