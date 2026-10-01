@@ -1,9 +1,10 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Files from '../../pages/Files';
-import { useFiles, useFileNormalize, useFilePreview } from '../../hooks/useFiles';
+import { useFiles, useFileNormalize, useFilePreview } from '../../hooks/useFiles'
+import { screen } from '@testing-library/react';
 
 // Mock i18n
 jest.mock('react-i18next', () => ({

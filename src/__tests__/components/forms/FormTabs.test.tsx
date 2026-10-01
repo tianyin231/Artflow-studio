@@ -1,7 +1,8 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { FormTabs } from '../../../components/forms/FormTabs';
+import { render } from '@testing-library/react'
+import { FormTabs } from '../../../components/forms/FormTabs'
+import { fireEvent, screen } from '@testing-library/react';
 
 describe('FormTabs', () => {
   const items = [

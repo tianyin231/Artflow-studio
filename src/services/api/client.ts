@@ -10,26 +10,23 @@ declare global {
 /* eslint-enable no-var */
 
 /**
- * Get environment variable value
- * Supports both Vite (import.meta.env) and Jest (process.env) environments
+ * Get environment variable value.
+ * Vite `define` injects globalThis.__VITE_ENV__ at build time (no import.meta,
+ * so Jest/CJS can still parse this file).
  */
 function getEnvVar(key: string): string | undefined {
-  // In Jest/test environment, use process.env or global mock
-  const nodeProcess = typeof globalThis !== 'undefined' && 'process' in globalThis 
-    ? (globalThis as { process?: NodeJS.Process }).process 
+  const viteEnv = (globalThis as { __VITE_ENV__?: Record<string, string | undefined> }).__VITE_ENV__;
+  if (viteEnv?.[key] !== undefined && viteEnv[key] !== '') {
+    return viteEnv[key];
+  }
+
+  const nodeProcess = typeof globalThis !== 'undefined' && 'process' in globalThis
+    ? (globalThis as { process?: NodeJS.Process }).process
     : undefined;
   if (nodeProcess?.env?.[key]) {
     return nodeProcess.env[key];
   }
-  
-  // Check global mock (for tests)
-  if (typeof globalThis !== 'undefined' && globalThis.__VITE_ENV__?.[key]) {
-    return globalThis.__VITE_ENV__[key];
-  }
-  
-  // In Vite environment, import.meta.env is replaced at build time
-  // For runtime, we use a global variable that Vite sets
-  // In tests, this will be undefined and we'll use the global mock above
+
   return undefined;
 }
 

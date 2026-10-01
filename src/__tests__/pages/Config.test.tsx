@@ -1,9 +1,10 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Config from '../../pages/Config';
-import { useConfig, useConfigFiles } from '../../hooks/useConfig';
+import { useConfig, useConfigFiles } from '../../hooks/useConfig'
+import { screen } from '@testing-library/react';
 
 // Mock hooks
 jest.mock('../../hooks/useConfig');

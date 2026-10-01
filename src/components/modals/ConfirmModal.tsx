@@ -61,12 +61,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   ...modalProps
 }) => {
   const handleOk = async () => {
-    try {
-      await onConfirm();
-    } catch (error) {
-      // Error handling is up to the caller
-      throw error;
-    }
+    await onConfirm();
   };
 
   const handleCancel = () => {
@@ -131,12 +126,8 @@ export const showConfirmModal = (props: Omit<ConfirmModalProps, 'open'>) => {
       cancelText: props.cancelText || 'Cancel',
       okType: props.type === 'danger' ? 'danger' : 'primary',
       onOk: async () => {
-        try {
-          await props.onConfirm();
-          resolve(true);
-        } catch (error) {
-          throw error;
-        }
+        await props.onConfirm();
+        resolve(true);
       },
       onCancel: () => {
         if (props.onCancel) {

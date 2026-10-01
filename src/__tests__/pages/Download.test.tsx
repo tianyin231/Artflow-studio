@@ -1,10 +1,11 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Download from '../../pages/Download';
-import { useDownload, useDownloadStatus, useDownloadLogs, useIncompleteTasks } from '../../hooks/useDownload';
-import { useConfig } from '../../hooks/useConfig';
+import { useDownload, useDownloadStatus, useDownloadLogs, useIncompleteTasks } from '../../hooks/useDownload'
+import { useConfig } from '../../hooks/useConfig'
+import { screen } from '@testing-library/react';
 
 // Mock i18n
 jest.mock('react-i18next', () => ({

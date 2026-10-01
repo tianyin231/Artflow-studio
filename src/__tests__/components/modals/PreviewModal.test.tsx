@@ -1,7 +1,8 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { PreviewModal } from '../../../components/modals/PreviewModal';
+import { render } from '@testing-library/react'
+import { PreviewModal } from '../../../components/modals/PreviewModal'
+import { screen } from '@testing-library/react';
 
 describe('PreviewModal', () => {
   const defaultProps = {
@@ -139,7 +140,7 @@ describe('PreviewModal', () => {
 
   describe('Modal configuration', () => {
     it('uses custom width', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <PreviewModal {...defaultProps} width={1200} content="Test" />
       );
       // Width is passed to Modal component

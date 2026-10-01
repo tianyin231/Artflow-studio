@@ -1,8 +1,8 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { TableFilters } from '../../../components/tables/TableFilters';
-import dayjs from 'dayjs';
+import { render } from '@testing-library/react'
+import { TableFilters } from '../../../components/tables/TableFilters'
+import { fireEvent, screen } from '@testing-library/react';
 
 describe('TableFilters', () => {
   const filters = [

@@ -1,9 +1,10 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
-import { Form, Input } from 'antd';
-import { FormModal } from '../../../components/modals/FormModal';
+import { Form, Input } from 'antd'
+import { FormModal } from '../../../components/modals/FormModal'
+import { screen, waitFor } from '@testing-library/react';
 
 describe('FormModal', () => {
   const TestForm: React.FC<{

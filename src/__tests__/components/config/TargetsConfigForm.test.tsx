@@ -1,10 +1,11 @@
 /// <reference types="@testing-library/jest-dom" />
 import React, { useEffect } from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
-import { Form } from 'antd';
-import { TargetsConfigForm } from '../../../pages/Config/components/TargetsConfigForm';
+import { Form } from 'antd'
+import { TargetsConfigForm } from '../../../pages/Config/components/TargetsConfigForm'
 import type { TargetConfig } from '../../../pages/Config/components/targets/types';
+import { screen, waitFor } from '@testing-library/react';
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({

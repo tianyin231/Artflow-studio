@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { FileUploader } from '../../../components/common/FileUploader';
+import { render } from '@testing-library/react'
+import { FileUploader } from '../../../components/common/FileUploader'
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 
 // Mock message API
 jest.mock('antd', () => {

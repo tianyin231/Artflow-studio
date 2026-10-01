@@ -1,6 +1,6 @@
-import { renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter } from 'react-router-dom';
+import { renderHook } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { BrowserRouter } from 'react-router-dom'
 
 jest.mock('../../services/api', () => ({
   api: {
@@ -10,8 +10,9 @@ jest.mock('../../services/api', () => ({
   },
 }));
 
-import { api } from '../../services/api';
-import { useLayoutAuth } from '../../components/Layout/hooks/useLayoutAuth';
+import { api } from '../../services/api'
+import { useLayoutAuth } from '../../components/Layout/hooks/useLayoutAuth'
+import { waitFor } from '@testing-library/react';
 
 describe('useLayoutAuth', () => {
   let queryClient: QueryClient;

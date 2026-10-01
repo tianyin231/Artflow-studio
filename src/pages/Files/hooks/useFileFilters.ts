@@ -39,35 +39,41 @@ export function useFileFilters(
         endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
         break;
       case 'yesterday':
-        const yesterday = new Date(now);
-        yesterday.setDate(yesterday.getDate() - 1);
-        startDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
-        endDate = new Date(
-          yesterday.getFullYear(),
-          yesterday.getMonth(),
-          yesterday.getDate(),
-          23,
-          59,
-          59,
-          999
-        );
-        break;
+        {
+          const yesterday = new Date(now);
+          yesterday.setDate(yesterday.getDate() - 1);
+          startDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+          endDate = new Date(
+            yesterday.getFullYear(),
+            yesterday.getMonth(),
+            yesterday.getDate(),
+            23,
+            59,
+            59,
+            999
+          );
+          break;
+        }
       case 'thisWeek':
-        const dayOfWeek = now.getDay();
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - dayOfWeek);
-        startDate.setHours(0, 0, 0, 0);
-        break;
+        {
+          const dayOfWeek = now.getDay();
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - dayOfWeek);
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        }
       case 'lastWeek':
-        const lastWeekStart = new Date(now);
-        lastWeekStart.setDate(now.getDate() - now.getDay() - 7);
-        lastWeekStart.setHours(0, 0, 0, 0);
-        startDate = lastWeekStart;
-        const lastWeekEnd = new Date(lastWeekStart);
-        lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
-        lastWeekEnd.setHours(23, 59, 59, 999);
-        endDate = lastWeekEnd;
-        break;
+        {
+          const lastWeekStart = new Date(now);
+          lastWeekStart.setDate(now.getDate() - now.getDay() - 7);
+          lastWeekStart.setHours(0, 0, 0, 0);
+          startDate = lastWeekStart;
+          const lastWeekEnd = new Date(lastWeekStart);
+          lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
+          lastWeekEnd.setHours(23, 59, 59, 999);
+          endDate = lastWeekEnd;
+          break;
+        }
       case 'thisMonth':
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
         break;

@@ -2,17 +2,15 @@
  * Tests for authStore
  */
 
-import { renderHook, act } from '@testing-library/react';
-import { useAuthStore } from '../../stores/authStore';
+import { renderHook, act } from '@testing-library/react'
+import { useAuthStore } from '../../stores/authStore'
 
 describe('authStore', () => {
   beforeEach(() => {
-    // Clear store before each test
-    const { result } = renderHook(() => useAuthStore());
+    // Clear in-memory store (zustand singleton) then persistence
     act(() => {
-      result.current.clearAuth();
+      useAuthStore.getState().clearAuth();
     });
-    // Clear localStorage
     localStorage.clear();
   });
 

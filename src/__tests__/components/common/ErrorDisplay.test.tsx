@@ -1,8 +1,9 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { ErrorDisplay } from '../../../components/common/ErrorDisplay';
-import { ErrorCode } from '../../../types/errors';
+import { render } from '@testing-library/react'
+import { ErrorDisplay } from '../../../components/common/ErrorDisplay'
+import { ErrorCode } from '../../../types/errors'
+import { fireEvent, screen } from '@testing-library/react';
 
 describe('ErrorDisplay', () => {
   it('renders with default title and error message', () => {

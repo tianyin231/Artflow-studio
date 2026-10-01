@@ -3,16 +3,16 @@
  */
 
 import React from 'react';
-import { render } from '@testing-library/react';
-import { axe, toHaveNoViolations } from 'jest-axe';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter } from 'react-router-dom';
+import { render } from '@testing-library/react'
+import { axe, toHaveNoViolations } from 'jest-axe'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { BrowserRouter } from 'react-router-dom'
 
 import Login from '../../pages/Login';
-import { EmptyState } from '../../components/common/EmptyState';
-import { LoadingSpinner } from '../../components/common/LoadingSpinner';
-import { ErrorDisplay } from '../../components/common/ErrorDisplay';
-import { ErrorCode } from '../../types/errors';
+import { EmptyState } from '../../components/common/EmptyState'
+import { LoadingSpinner } from '../../components/common/LoadingSpinner'
+import { ErrorDisplay } from '../../components/common/ErrorDisplay'
+import { ErrorCode } from '../../types/errors'
 
 // Mock i18n
 jest.mock('react-i18next', () => ({

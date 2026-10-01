@@ -1,8 +1,9 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
-import { FormSection } from '../../../components/forms/FormSection';
+import { FormSection } from '../../../components/forms/FormSection'
+import { screen } from '@testing-library/react';
 
 describe('FormSection', () => {
   describe('Card mode (default)', () => {

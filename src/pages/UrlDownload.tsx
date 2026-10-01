@@ -451,6 +451,7 @@ export const UrlDownload: React.FC = () => {
                   <List.Item
                     actions={[
                       <Button
+                        key="remove"
                         type="text"
                         danger
                         icon={<DeleteOutlined />}

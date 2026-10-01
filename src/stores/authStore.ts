@@ -57,9 +57,14 @@ export const useAuthStore = create<AuthStore>()(
        * Clear authentication state
        */
       clearAuth: () =>
-        set({
-          ...initialState,
-        }),
+        set((state) => ({
+          ...state,
+          isAuthenticated: false,
+          userId: undefined,
+          username: undefined,
+          token: undefined,
+          tokenExpiry: undefined,
+        })),
 
       /**
        * Set token and expiry

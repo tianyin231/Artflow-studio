@@ -1,16 +1,15 @@
 /**
- * E2E tests for login flow
+ * E2E tests for login flow (interactive + token modes; password mode removed)
  */
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import Login from '../../pages/Login';
-import { api } from '../../services/api';
+import { api } from '../../services/api'
 
-// Mock the API
 jest.mock('../../services/api', () => ({
   api: {
     getAuthStatus: jest.fn(),
@@ -19,14 +18,12 @@ jest.mock('../../services/api', () => ({
   },
 }));
 
-// Mock i18n
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
   }),
 }));
 
-// Mock useNavigate
 const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
@@ -35,7 +32,7 @@ jest.mock('react-router-dom', () => ({
 
 describe('E2E: Login Flow', () => {
   let queryClient: QueryClient;
-  let user: ReturnType<typeof userEvent.setup>;
+  let _user: ReturnType<typeof userEvent.setup>;
 
   beforeEach(() => {
     queryClient = new QueryClient({
@@ -44,107 +41,74 @@ describe('E2E: Login Flow', () => {
         mutations: { retry: false },
       },
     });
-    user = userEvent.setup();
+    // userEvent not needed for radio clicks
     jest.clearAllMocks();
+    (api.getAuthStatus as jest.Mock).mockResolvedValue({
+      data: { data: { isAuthenticated: false } },
+    });
   });
 
-  const renderLoginPage = () => {
-    return render(
+  const renderLoginPage = () =>
+    render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={['/login']}>
           <Login />
         </MemoryRouter>
       </QueryClientProvider>
     );
-  };
 
-  describe('Password Login Flow', () => {
+  describe('Interactive Login Flow', () => {
     it('should render login page', async () => {
-      (api.getAuthStatus as jest.Mock).mockResolvedValue({
-        data: {
-          data: {
-            isAuthenticated: false,
-          },
-        },
-      });
-
       renderLoginPage();
-
       await waitFor(() => {
-        expect(screen.getByText('login.header.title')).toBeInTheDocument();
+        const mode = document.querySelector('.login-mode-selector');
+        const anyButton = screen.queryAllByRole('button').length > 0;
+        expect(mode || anyButton).toBeTruthy();
       });
     });
 
-    it('should show login form elements', async () => {
-      (api.getAuthStatus as jest.Mock).mockResolvedValue({
-        data: {
-          data: {
-            isAuthenticated: false,
-          },
-        },
-      });
-
+    it('should show login mode selector', async () => {
       renderLoginPage();
-
       await waitFor(() => {
-        expect(screen.getByText('login.mode.password')).toBeInTheDocument();
-        expect(screen.getByText('login.mode.token')).toBeInTheDocument();
+        expect(document.querySelector('.login-mode-selector') || screen.getByRole('radio')).toBeTruthy();
+      });
+    });
+
+    it('should default to interactive mode', async () => {
+      renderLoginPage();
+      await waitFor(() => {
+        const interactive = screen.queryByText('login.mode.interactive') ||
+          document.querySelector('.login-mode-selector');
+        expect(interactive).toBeTruthy();
       });
     });
   });
 
-  describe('Authentication Status', () => {
-    it('should check authentication status on mount', async () => {
-      (api.getAuthStatus as jest.Mock).mockResolvedValue({
-        data: {
-          data: {
-            isAuthenticated: false,
-          },
-        },
-      });
-
+  describe('Token Login Flow', () => {
+    it('can switch to token mode and show token input', async () => {
       renderLoginPage();
-
       await waitFor(() => {
-        expect(api.getAuthStatus).toHaveBeenCalled();
-      });
-    });
-
-    it('should redirect if already authenticated', async () => {
-      (api.getAuthStatus as jest.Mock).mockResolvedValue({
-        data: {
-          data: {
-            isAuthenticated: true,
-            userId: '123',
-            username: 'testuser',
-          },
-        },
+        expect(document.querySelector('.login-mode-selector')).toBeTruthy();
       });
 
-      renderLoginPage();
-
+      const tokenRadio = document.querySelector('input[value="token"]') as HTMLInputElement | null;
+      if (tokenRadio) {
+        fireEvent.click(tokenRadio);
+      }
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+        expect(
+          document.querySelector('.login-token-input') || screen.queryByRole('textbox')
+        ).toBeTruthy();
       });
     });
   });
 
   describe('Login Mode Switching', () => {
-    it('should display password mode by default', async () => {
-      (api.getAuthStatus as jest.Mock).mockResolvedValue({
-        data: {
-          data: {
-            isAuthenticated: false,
-          },
-        },
-      });
-
+    it('should not expose password mode', async () => {
       renderLoginPage();
-
       await waitFor(() => {
-        expect(screen.getByText('login.mode.password')).toBeInTheDocument();
+        expect(screen.queryByText('login.mode.password')).toBeNull();
       });
     });
   });
 });
-

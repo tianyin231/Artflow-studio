@@ -1,8 +1,8 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { DataTable } from '../../../components/tables/DataTable';
+import { render } from '@testing-library/react'
+import { DataTable } from '../../../components/tables/DataTable'
+import { screen } from '@testing-library/react';
 
 interface TestData {
   id: number;

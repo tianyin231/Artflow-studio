@@ -1,14 +1,10 @@
 import React from 'react';
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  useStatsOverview,
-  useDownloadStats,
-  useTagStats,
-  useAuthorStats,
-} from '../../hooks/useStats';
-import { statsService } from '../../services/statsService';
+import { describe, it, expect, jest, beforeEach } from '@jest/globals'
+import { renderHook } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useStatsOverview, useDownloadStats, useTagStats, useAuthorStats } from '../../hooks/useStats'
+import { statsService } from '../../services/statsService'
+import { waitFor } from '@testing-library/react';
 
 // Mock the stats service
 jest.mock('../../services/statsService', () => ({

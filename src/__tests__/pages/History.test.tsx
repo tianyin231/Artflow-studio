@@ -1,9 +1,10 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import History from '../../pages/History';
-import { useDownloadHistory } from '../../hooks/useDownload';
+import { useDownloadHistory } from '../../hooks/useDownload'
+import { screen } from '@testing-library/react';
 
 // Mock hooks
 jest.mock('../../hooks/useDownload');

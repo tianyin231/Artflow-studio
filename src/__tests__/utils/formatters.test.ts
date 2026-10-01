@@ -2,16 +2,7 @@
  * Tests for formatting utilities
  */
 
-import {
-  formatFileSize,
-  formatDuration,
-  formatNumber,
-  formatPercentage,
-  truncateText,
-  formatPixivId,
-  pluralize,
-  formatRelativeTime,
-} from '../../utils/formatters';
+import { formatFileSize, formatDuration, formatNumber, formatPercentage, truncateText, formatPixivId, pluralize, formatRelativeTime } from '../../utils/formatters'
 
 describe('formatters', () => {
   describe('formatFileSize', () => {

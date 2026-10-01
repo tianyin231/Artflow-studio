@@ -1,7 +1,8 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { ErrorBoundary } from '../../../components/common/ErrorBoundary';
+import { render } from '@testing-library/react'
+import { ErrorBoundary } from '../../../components/common/ErrorBoundary'
+import { fireEvent, screen } from '@testing-library/react';
 
 // Component that throws an error
 const ThrowError = ({ shouldThrow = false }: { shouldThrow?: boolean }) => {

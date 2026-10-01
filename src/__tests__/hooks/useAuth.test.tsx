@@ -1,11 +1,12 @@
 import React from 'react';
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AxiosResponse } from 'axios';
-import { useAuth } from '../../hooks/useAuth';
-import { api } from '../../services/api';
-import { ApiResponse, AuthStatus, AuthLoginResponse } from '../../services/api/types';
+import { describe, it, expect, jest, beforeEach } from '@jest/globals'
+import { renderHook } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { AxiosResponse } from 'axios'
+import { useAuth } from '../../hooks/useAuth'
+import { api } from '../../services/api'
+import { ApiResponse, AuthStatus, AuthLoginResponse } from '../../services/api/types'
+import { waitFor } from '@testing-library/react';
 
 // Mock the API
 jest.mock('../../services/api', () => ({

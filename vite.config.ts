@@ -71,6 +71,12 @@ function devApiReadyGate(): Plugin {
 
 export default defineConfig({
   plugins: [react(), devApiReadyGate()],
+  define: {
+    'globalThis.__VITE_ENV__': JSON.stringify({
+      VITE_API_BASE_URL: process.env.VITE_API_BASE_URL || '',
+      VITE_USE_EMBEDDED_BACKEND: process.env.VITE_USE_EMBEDDED_BACKEND || '',
+    }),
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -92,6 +98,46 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    chunkSizeWarningLimit: 500,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          // Split large UI vendors so no single chunk exceeds 500KB
+          if (id.includes('node_modules/rc-select') || id.includes('node_modules/rc-tree') || id.includes('node_modules/rc-table') || id.includes('node_modules/rc-picker')) {
+            return 'antd-rc-heavy';
+          }
+          if (id.includes('node_modules/rc-')) {
+            return 'antd-rc';
+          }
+          if (id.includes('node_modules/@ant-design')) {
+            return 'antd-icons';
+          }
+          if (id.includes('node_modules/antd/')) {
+            // Split antd internals further so no chunk exceeds 500KB
+            const m = id.match(/node_modules\/antd\/(?:es|lib)\/([^/]+)/);
+            if (m) {
+              const group = m[1];
+              if (['table', 'tree', 'select', 'date-picker', 'form', 'modal', 'menu', 'tree-select'].includes(group)) {
+                return `antd-${group}`;
+              }
+              return 'antd-core';
+            }
+            return 'antd-core';
+          }
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/') || id.includes('node_modules/react-router') || id.includes('node_modules/scheduler')) {
+            return 'react-vendor';
+          }
+          if (id.includes('node_modules/@tanstack') || id.includes('node_modules/axios') || id.includes('node_modules/zustand')) {
+            return 'query-vendor';
+          }
+          if (id.includes('node_modules/dayjs') || id.includes('node_modules/i18next') || id.includes('node_modules/react-i18next')) {
+            return 'utils-vendor';
+          }
+          return 'vendor';
+        },
+      },
+    },
   },
   // 支持 Capacitor
   base: './',

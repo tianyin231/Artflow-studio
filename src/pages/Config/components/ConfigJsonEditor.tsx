@@ -55,7 +55,6 @@ export const ConfigJsonEditor: React.FC<ConfigJsonEditorProps> = ({
       return;
     }
 
-    let intervalId: NodeJS.Timeout;
     let isPolling = true;
 
     const pollFileContent = async () => {
@@ -89,7 +88,7 @@ export const ConfigJsonEditor: React.FC<ConfigJsonEditorProps> = ({
     // Initial poll
     pollFileContent();
     // Poll every 5 seconds (reduced from 2 seconds) and only when not editing
-    intervalId = setInterval(() => {
+    const intervalId = setInterval(() => {
       if (!isEditingRef.current) {
         pollFileContent();
       }
