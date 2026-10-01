@@ -44,6 +44,20 @@ export const api = {
   loginWithToken: authApi.loginWithToken,
   refreshToken: authApi.refreshToken,
   logout: authApi.logout,
+  loginStart: authApi.loginStart,
+  loginComplete: authApi.loginComplete,
+  importToken: authApi.importToken,
+  listAccounts: authApi.listAccounts,
+  useAccount: authApi.useAccount,
+  proxyTest: authApi.proxyTest,
+  listPublishers: async () => {
+    const { apiClient } = await import('./client');
+    return apiClient.get('/publishers');
+  },
+  dryRunPublish: async (id: string) => {
+    const { apiClient } = await import('./client');
+    return apiClient.post(`/publishers/${encodeURIComponent(id)}/dry-run`, {});
+  },
 
   // Configuration
   getConfig: configApi.getConfig,

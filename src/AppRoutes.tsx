@@ -19,6 +19,8 @@ const History = lazy(() => import('./pages/History'));
 const Logs = lazy(() => import('./pages/Logs'));
 const Files = lazy(() => import('./pages/Files'));
 const Login = lazy(() => import('./pages/Login'));
+const Accounts = lazy(() => import('./pages/Accounts'));
+const PublishPlatforms = lazy(() => import('./pages/PublishPlatforms'));
 
 /**
  * AppRoutes component - contains all route definitions
@@ -29,6 +31,7 @@ export function AppRoutes() {
     <Suspense fallback={<LoadingSpinner />}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/accounts" element={<Accounts />} />
         <Route
           path="/"
           element={
@@ -83,6 +86,22 @@ export function AppRoutes() {
             element={
               <Suspense fallback={<LoadingSpinner />}>
                 <VideoStudio />
+              </Suspense>
+            }
+          />
+          <Route
+            path="publish-platforms"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <PublishPlatforms />
+              </Suspense>
+            }
+          />
+          <Route
+            path="accounts"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <Accounts />
               </Suspense>
             }
           />

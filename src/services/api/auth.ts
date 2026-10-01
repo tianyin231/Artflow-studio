@@ -73,4 +73,17 @@ export const authApi = {
    */
   logout: (): Promise<AxiosResponse<ApiResponse<void>>> =>
     apiClient.post('/auth/logout'),
+
+  loginStart: (): Promise<AxiosResponse<ApiResponse<{ loginId: string; authorizeUrl: string; expiresAt: string }>>> =>
+    apiClient.post('/auth/login/start'),
+  loginComplete: (loginId: string, callback: string): Promise<AxiosResponse<ApiResponse<{ ok: boolean }>>> =>
+    apiClient.post('/auth/login/complete', { loginId, callback }),
+  importToken: (refreshToken: string): Promise<AxiosResponse<ApiResponse<{ ok: boolean }>>> =>
+    apiClient.post('/auth/import-token', { refreshToken }),
+  listAccounts: (): Promise<AxiosResponse<ApiResponse<{ userId: string; name?: string; isDefault: boolean }[]>>> =>
+    apiClient.get('/auth/accounts'),
+  useAccount: (uid: string): Promise<AxiosResponse<ApiResponse<{ ok: boolean }>>> =>
+    apiClient.post(`/auth/accounts/${encodeURIComponent(uid)}/use`),
+  proxyTest: (targets?: string[]): Promise<AxiosResponse<ApiResponse<{ results: { target: string; ok: boolean; latencyMs?: number; error?: string }[] }>>> =>
+    apiClient.post('/auth/proxy/test', { targets }),
 };
