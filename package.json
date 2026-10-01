@@ -25,7 +25,7 @@
     "electron:build": "bash build/check-before-build.sh && npm run build:all && electron-builder && bash build/check-after-build.sh",
     "electron:build:win": "bash build/check-before-build.sh && npm run build:all && electron-builder --win && bash build/check-after-build.sh",
     "electron:build:mac": "bash build/check-before-build.sh && npm run build:all && electron-builder --mac --arm64 && bash build/check-after-build.sh",
-    "electron:build:linux": "bash build/check-before-build.sh && npm run build:all && electron-builder --linux && bash build/check-after-build.sh",
+    "electron:build:linux": "electron-builder --linux",
     "build:all": "npm run build",
     "electron:build:mac:verbose": "bash build-electron.sh",
     "electron:build:mac:simple": "bash build-electron-simple.sh",
@@ -40,7 +40,8 @@
     "ios:sync": "npm run build && npx cap sync ios",
     "ios:open": "npx cap open ios",
     "mobile:sync": "npm run build && npx cap sync",
-    "check-translations": "node check-translations.cjs"
+    "check-translations": "node check-translations.cjs",
+    "electron:build:linux:dir": "electron-builder --linux --dir"
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
@@ -75,8 +76,8 @@
     "@typescript-eslint/eslint-plugin": "^6.14.0",
     "@typescript-eslint/parser": "^6.14.0",
     "@vitejs/plugin-react": "^5.1.0",
-    "electron": "^39.1.1",
-    "electron-builder": "^26.2.0",
+    "electron": "^39.8.10",
+    "electron-builder": "^26.15.3",
     "eslint": "^8.55.0",
     "eslint-plugin-react": "^7.37.2",
     "eslint-plugin-react-hooks": "^4.6.0",
