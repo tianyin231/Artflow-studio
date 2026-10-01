@@ -21,6 +21,9 @@ const Files = lazy(() => import('./pages/Files'));
 const Login = lazy(() => import('./pages/Login'));
 const Accounts = lazy(() => import('./pages/Accounts'));
 const PublishPlatforms = lazy(() => import('./pages/PublishPlatforms'));
+const TemplateLibrary = lazy(() => import('./pages/TemplateLibrary'));
+const PublishCalendar = lazy(() => import('./pages/PublishCalendar'));
+const Plugins = lazy(() => import('./pages/Plugins'));
 
 /**
  * AppRoutes component - contains all route definitions
@@ -86,6 +89,30 @@ export function AppRoutes() {
             element={
               <Suspense fallback={<LoadingSpinner />}>
                 <VideoStudio />
+              </Suspense>
+            }
+          />
+          <Route
+            path="templates"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <TemplateLibrary />
+              </Suspense>
+            }
+          />
+          <Route
+            path="calendar"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <PublishCalendar />
+              </Suspense>
+            }
+          />
+          <Route
+            path="plugins"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <Plugins />
               </Suspense>
             }
           />

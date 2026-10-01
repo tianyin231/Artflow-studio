@@ -67,6 +67,21 @@ export default function LayoutSider() {
       label: '账号与连接',
     },
     {
+      key: '/templates',
+      icon: <FileTextOutlined />,
+      label: '模板库',
+    },
+    {
+      key: '/calendar',
+      icon: <ClockCircleOutlined />,
+      label: '发布日历',
+    },
+    {
+      key: '/plugins',
+      icon: <ApiOutlined />,
+      label: '插件',
+    },
+    {
       key: '/presets',
       icon: <SaveOutlined />,
       label: t('layout.commandPresets'),
