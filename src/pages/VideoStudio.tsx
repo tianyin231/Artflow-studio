@@ -238,10 +238,18 @@ export default function VideoStudio() {
     message.warning(task.status === 'review_required' ? '已驳回并重新生成视频' : '已驳回，可继续调整后重做');
   };
 
+  const [renderTransition, setRenderTransition] = useState('crossfade');
+  const [coverTemplate, setCoverTemplate] = useState('grid');
+  const [subtitles, setSubtitles] = useState<'none' | 'srt' | 'ass'>('none');
+
   const handleRerenderVideo = async () => {
     if (!task) return;
-    await rerenderVideo.mutateAsync({ taskId: task.id, note: '视频生成页手动重新生成视频' });
-    message.success('已开始重新生成视频');
+    await rerenderVideo.mutateAsync({
+      taskId: task.id,
+      note: '视频生成页手动重新生成视频',
+      options: { transition: renderTransition, coverTemplate, subtitles },
+    });
+    message.success(`已开始重新生成视频（转场=${renderTransition} 封面=${coverTemplate} 字幕=${subtitles}）`);
   };
 
   const handleAssetStatus = async (asset: WorkflowImageAsset, status: 'accepted' | 'rejected') => {
@@ -776,7 +784,51 @@ export default function VideoStudio() {
                               <Button danger disabled={task.status !== 'review_required'} loading={rejectTask.isPending} onClick={handleReject}>
                                 驳回并重做
                               </Button>
-                              <Button disabled={!task.videoPath} loading={rerenderVideo.isPending} onClick={handleRerenderVideo}>
+                              <Select
+                                data-testid="select-transition"
+                                size="small"
+                                style={{ width: 140 }}
+                                value={renderTransition}
+                                onChange={setRenderTransition}
+                                options={[
+                                  { value: 'crossfade', label: '转场: 交叉淡化' },
+                                  { value: 'kenburns-zoom-in', label: '转场: Ken Burns' },
+                                  { value: 'flash-white', label: '转场: 闪白' },
+                                  { value: 'push-left', label: '转场: 左推' },
+                                  { value: 'blur-in', label: '转场: 模糊' },
+                                ]}
+                              />
+                              <Select
+                                data-testid="select-cover-template"
+                                size="small"
+                                style={{ width: 140 }}
+                                value={coverTemplate}
+                                onChange={setCoverTemplate}
+                                options={[
+                                  { value: 'grid', label: '封面: 网格' },
+                                  { value: 'single', label: '封面: 单图' },
+                                  { value: 'collage', label: '封面: 拼贴' },
+                                  { value: 'youtube-720p', label: '封面: YouTube' },
+                                ]}
+                              />
+                              <Select
+                                data-testid="select-subtitles"
+                                size="small"
+                                style={{ width: 120 }}
+                                value={subtitles}
+                                onChange={(v) => setSubtitles(v as 'none' | 'srt' | 'ass')}
+                                options={[
+                                  { value: 'none', label: '字幕: 无' },
+                                  { value: 'srt', label: '字幕: SRT' },
+                                  { value: 'ass', label: '字幕: ASS' },
+                                ]}
+                              />
+                              <Button
+                                data-testid="btn-rerender-video"
+                                disabled={!task.videoPath}
+                                loading={rerenderVideo.isPending}
+                                onClick={handleRerenderVideo}
+                              >
                                 重新生成视频
                               </Button>
                               <Button icon={<CopyOutlined />} disabled={!task.videoPath} onClick={handleCopyPath}>

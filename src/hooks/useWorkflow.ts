@@ -161,8 +161,15 @@ export function useResumeWorkflowTask() {
 export function useRerenderWorkflowVideo() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ taskId, note }: { taskId: string; note?: string }) =>
-      (await workflowApi.rerenderVideo(taskId, note)).data.data,
+    mutationFn: async ({
+      taskId,
+      note,
+      options,
+    }: {
+      taskId: string;
+      note?: string;
+      options?: { transition?: string; coverTemplate?: string; subtitles?: 'none' | 'srt' | 'ass' };
+    }) => (await workflowApi.rerenderVideo(taskId, note, options)).data.data,
     onSuccess: (task) => {
       queryClient.invalidateQueries({ queryKey: WORKFLOW_TASKS_KEY });
       queryClient.setQueryData(workflowTaskKey(task.id), task);

@@ -131,6 +131,12 @@ export interface WorkflowVideoEffectPlan {
   shots: WorkflowVideoEffectShot[];
 }
 
+export interface WorkflowRenderOptions {
+  transition?: string;
+  coverTemplate?: string;
+  subtitles?: 'none' | 'srt' | 'ass';
+}
+
 export interface WorkflowVideoOverrides {
   aspectRatio?: '16:9' | '9:16' | '1:1';
   totalDuration?: number;
