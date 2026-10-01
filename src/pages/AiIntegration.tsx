@@ -82,6 +82,19 @@ export default function AiIntegration() {
     ],
     []
   );
+  const [promptVersion, setPromptVersion] = useState('plan-v2');
+  const [tokenUsage, setTokenUsage] = useState({ prompt: 0, completion: 0, costUsd: 0 });
+  const providerPresets = useMemo(
+    () => [
+      { id: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com/v1' },
+      { id: 'deepseek', label: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1' },
+      { id: 'dashscope', label: '通义千问', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
+      { id: 'mimo', label: 'Xiaomi MiMo', baseUrl: 'https://api.xiaomi.com/v1' },
+      { id: 'ollama', label: 'Ollama 本地', baseUrl: 'http://127.0.0.1:11434/v1' },
+      { id: 'mock', label: 'Mock (fixture)', baseUrl: 'http://127.0.0.1:3302/v1' },
+    ],
+    []
+  );
   const modelOptions = useMemo(() => {
     const remoteModels = models.map((model) => ({ label: model.name || model.id, value: model.id }));
     if (watchedModel && !remoteModels.some((model) => model.value === watchedModel)) {
@@ -219,7 +232,60 @@ export default function AiIntegration() {
                 <Descriptions.Item label="当前模型">{watchedModel || '未选择'}</Descriptions.Item>
                 <Descriptions.Item label="模型数量">{models.length || '未获取'}</Descriptions.Item>
                 <Descriptions.Item label="密钥状态">{watchedApiKey ? '已填写' : '未填写'}</Descriptions.Item>
+                <Descriptions.Item label="Prompt 版本">{promptVersion}</Descriptions.Item>
               </Descriptions>
+              <Card size="small" title="Token 用量（mock）" data-testid="token-usage-card">
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Descriptions size="small" column={3}>
+                    <Descriptions.Item label="prompt">{tokenUsage.prompt}</Descriptions.Item>
+                    <Descriptions.Item label="completion">{tokenUsage.completion}</Descriptions.Item>
+                    <Descriptions.Item label="cost">${tokenUsage.costUsd.toFixed(6)}</Descriptions.Item>
+                  </Descriptions>
+                  <Button
+                    data-testid="btn-simulate-usage"
+                    size="small"
+                    onClick={() =>
+                      setTokenUsage({
+                        prompt: Math.floor(Math.random() * 400) + 50,
+                        completion: Math.floor(Math.random() * 120) + 20,
+                        costUsd: Number((Math.random() * 0.01).toFixed(6)),
+                      })
+                    }
+                  >
+                    模拟一次规划用量
+                  </Button>
+                </Space>
+              </Card>
+              <Card size="small" title="供应商预设" data-testid="provider-presets-card">
+                <Space wrap>
+                  {providerPresets.map((preset) => (
+                    <Tag
+                      key={preset.id}
+                      data-testid={`preset-${preset.id}`}
+                      color={watchedProvider === preset.id ? 'gold' : 'default'}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => {
+                        form.setFieldValue('provider', preset.id);
+                        form.setFieldValue('baseUrl', preset.baseUrl);
+                      }}
+                    >
+                      {preset.label}
+                    </Tag>
+                  ))}
+                </Space>
+              </Card>
+              <Card size="small" title="Prompt 版本" data-testid="prompt-version-card">
+                <Select
+                  data-testid="select-prompt-version"
+                  style={{ width: '100%' }}
+                  value={promptVersion}
+                  onChange={setPromptVersion}
+                  options={[
+                    { value: 'plan-v1', label: 'plan-v1（基础）' },
+                    { value: 'plan-v2', label: 'plan-v2（结构化）' },
+                  ]}
+                />
+              </Card>
             </Space>
           </Card>
         </Col>
