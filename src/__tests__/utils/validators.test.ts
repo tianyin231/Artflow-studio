@@ -2,20 +2,7 @@
  * Tests for validation utilities
  */
 
-import {
-  isValidEmail,
-  isValidUrl,
-  isValidPixivId,
-  isValidPort,
-  isValidIPv4,
-  isValidCron,
-  isValidDateString,
-  hasValidExtension,
-  isInRange,
-  isRequired,
-  hasMinLength,
-  hasMaxLength,
-} from '../../utils/validators';
+import { isValidEmail, isValidUrl, isValidPixivId, isValidPort, isValidIPv4, isValidCron, isValidDateString, hasValidExtension, isInRange, isRequired, hasMinLength, hasMaxLength } from '../../utils/validators'
 
 describe('validators', () => {
   describe('isValidEmail', () => {

@@ -2,12 +2,15 @@
  * Tests for uiStore
  */
 
-import { renderHook, act } from '@testing-library/react';
-import { useUIStore } from '../../stores/uiStore';
+import { renderHook, act } from '@testing-library/react'
+import { useUIStore } from '../../stores/uiStore'
 
 describe('uiStore', () => {
   beforeEach(() => {
-    // Clear localStorage before each test
+    // Reset in-memory store (zustand singleton) then clear persistence
+    act(() => {
+      useUIStore.getState().resetUI();
+    });
     localStorage.clear();
   });
 

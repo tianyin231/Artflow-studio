@@ -1,7 +1,8 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { EmptyState } from '../../../components/common/EmptyState';
+import { render } from '@testing-library/react'
+import { EmptyState } from '../../../components/common/EmptyState'
+import { screen } from '@testing-library/react';
 
 describe('EmptyState', () => {
   it('renders with default description', () => {

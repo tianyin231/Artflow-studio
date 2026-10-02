@@ -217,7 +217,9 @@ function inferCollectionConfig(command: string, current: CollectionConfigValues)
   if (compactCommand.includes('收藏最多') || compactCommand.includes('热门') || compactCommand.includes('高收藏')) next.sort = 'popular_desc';
   if (compactCommand.includes('本周') || compactCommand.includes('最近7天')) next.dateRange = [dayjs().subtract(7, 'day'), dayjs()];
   if (compactCommand.includes('本月') || compactCommand.includes('最近30天')) next.dateRange = [dayjs().subtract(30, 'day'), dayjs()];
-  if (compactCommand.includes('竖屏')) next.tagWhitelistText = next.tagWhitelistText;
+  if (compactCommand.includes('竖屏')) {
+    // vertical aspect is applied in inferVideoConfig
+  }
   return next;
 }
 

@@ -1,16 +1,11 @@
 import React from 'react';
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  useDownload,
-  useDownloadStatus,
-  useDownloadLogs,
-  useDownloadHistory,
-  useIncompleteTasks,
-} from '../../hooks/useDownload';
-import { downloadService } from '../../services/downloadService';
+import { describe, it, expect, jest, beforeEach } from '@jest/globals'
+import { renderHook } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useDownload, useDownloadStatus, useDownloadLogs, useDownloadHistory, useIncompleteTasks } from '../../hooks/useDownload'
+import { downloadService } from '../../services/downloadService'
 import type { ConfigData } from '../../services/api';
+import { waitFor } from '@testing-library/react';
 
 // Mock the download service
 jest.mock('../../services/downloadService', () => ({
@@ -269,7 +264,7 @@ describe('useDownload', () => {
     });
 
     it('should not fetch logs when taskId is undefined', async () => {
-      const { result } = renderHook(() => useDownloadLogs(undefined), { wrapper });
+      const { result: _result } = renderHook(() => useDownloadLogs(undefined), { wrapper });
 
       // Should not call the service when taskId is undefined
       expect(downloadService.getTaskLogs).not.toHaveBeenCalled();

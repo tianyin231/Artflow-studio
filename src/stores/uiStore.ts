@@ -27,6 +27,7 @@ export interface UIActions {
   setLanguage: (language: string) => void;
   setCompactMode: (compact: boolean) => void;
   setTablePageSize: (size: number) => void;
+  resetUI: () => void;
 }
 
 /**
@@ -89,6 +90,8 @@ export const useUIStore = create<UIStore>()(
        * Set table page size
        */
       setTablePageSize: (size) => set({ tablePageSize: size }),
+
+      resetUI: () => set((state) => ({ ...state, ...initialState })),
     }),
     {
       name: 'ui-storage',

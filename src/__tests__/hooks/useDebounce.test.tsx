@@ -2,8 +2,8 @@
  * Tests for useDebounce hook
  */
 
-import { renderHook, act } from '@testing-library/react';
-import { useDebounce } from '../../hooks/useDebounce';
+import { renderHook, act } from '@testing-library/react'
+import { useDebounce } from '../../hooks/useDebounce'
 
 describe('useDebounce', () => {
   beforeEach(() => {

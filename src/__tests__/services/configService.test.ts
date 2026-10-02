@@ -2,8 +2,8 @@
  * Tests for configService
  */
 
-import { configService } from '../../services/configService';
-import { api, ConfigData } from '../../services/api';
+import { configService } from '../../services/configService'
+import { api, ConfigData } from '../../services/api'
 
 // Mock the API
 jest.mock('../../services/api', () => ({

@@ -3,12 +3,13 @@
  */
 
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter } from 'react-router-dom';
-import { UrlDownload } from '../../pages/UrlDownload';
-import { downloadApi } from '../../services/api';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { BrowserRouter } from 'react-router-dom'
+import { UrlDownload } from '../../pages/UrlDownload'
+import { downloadApi } from '../../services/api'
+import { screen, waitFor } from '@testing-library/react';
 
 // Mock the API
 jest.mock('../../services/api', () => ({

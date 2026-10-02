@@ -1,7 +1,8 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { TablePagination } from '../../../components/tables/TablePagination';
+import { render } from '@testing-library/react'
+import { TablePagination } from '../../../components/tables/TablePagination'
+import { fireEvent, screen } from '@testing-library/react';
 
 describe('TablePagination', () => {
   it('renders pagination correctly', () => {

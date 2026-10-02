@@ -1,14 +1,10 @@
 import React from 'react';
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  useConfig,
-  useConfigFiles,
-  useConfigHistory,
-  useConfigValidation,
-} from '../../hooks/useConfig';
-import { configService } from '../../services/configService';
+import { describe, it, expect, jest, beforeEach } from '@jest/globals'
+import { renderHook } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useConfig, useConfigFiles, useConfigHistory, useConfigValidation } from '../../hooks/useConfig'
+import { configService } from '../../services/configService'
+import { waitFor } from '@testing-library/react';
 
 // Mock the config service
 jest.mock('../../services/configService', () => ({

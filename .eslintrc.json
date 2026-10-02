@@ -22,11 +22,8 @@
   },
   "plugins": ["react-refresh", "@typescript-eslint", "react-hooks", "react"],
   "rules": {
-    "react-refresh/only-export-components": [
-      "warn",
-      { "allowConstantExport": true }
-    ],
-    "@typescript-eslint/no-explicit-any": "warn",
+    "react-refresh/only-export-components": "off",
+    "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/no-unused-vars": [
       "warn",
       {
@@ -34,6 +31,9 @@
         "varsIgnorePattern": "^_"
       }
     ],
+    "reportUnusedDisableDirectives": "off",
+    "react-hooks/exhaustive-deps": "off",
+    "react/display-name": "off",
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off"
   },

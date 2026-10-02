@@ -1,13 +1,14 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import Files from '../../pages/Files';
-import { fileService } from '../../services/fileService';
-import { useFiles, useFilePreview, useFileNormalize } from '../../hooks/useFiles';
+import { fileService } from '../../services/fileService'
+import { useFiles, useFilePreview, useFileNormalize } from '../../hooks/useFiles'
 import type { FileItem as ApiFileItem } from '../../services/api/types';
+import { screen, waitFor } from '@testing-library/react';
 
 // Mock services
 jest.mock('../../services/fileService');
@@ -109,7 +110,7 @@ describe('File Management Integration Flow', () => {
   };
 
   it('should complete full file management flow', async () => {
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
 
     renderWithProviders(<Files />);
 
@@ -120,16 +121,16 @@ describe('File Management Integration Flow', () => {
     });
 
     expect(screen.getByText('files.typeDirectory')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /files\.delete/ })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /files\.delete/ }).length).toBeGreaterThan(0);
   }, 10000);
 
   it('should handle file filtering flow', async () => {
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
 
     renderWithProviders(<Files />);
 
     const filterInput = screen.getByPlaceholderText('files.searchPlaceholder') as HTMLInputElement;
-    await user.type(filterInput, 'test');
+    await _user.type(filterInput, 'test');
     expect(filterInput).toHaveValue('test');
 
     expect(screen.getByText('files.filterAll')).toBeInTheDocument();

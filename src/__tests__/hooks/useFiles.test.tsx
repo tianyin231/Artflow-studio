@@ -1,9 +1,10 @@
 import React from 'react';
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useFiles, useRecentFiles, useFilePreview, useFileNormalize } from '../../hooks/useFiles';
-import { fileService } from '../../services/fileService';
+import { describe, it, expect, jest, beforeEach } from '@jest/globals'
+import { renderHook } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useFiles, useRecentFiles, useFilePreview, useFileNormalize } from '../../hooks/useFiles'
+import { fileService } from '../../services/fileService'
+import { waitFor } from '@testing-library/react';
 
 // Mock the file service
 jest.mock('../../services/fileService', () => ({
@@ -197,7 +198,7 @@ describe('useFilePreview', () => {
     });
 
     expect(result.current.previewBlob).toBe(mockBlob);
-    expect(fileService.getFilePreview).toHaveBeenCalledWith('/path/to/file.jpg', undefined);
+    expect(fileService.getFilePreview).toHaveBeenCalledWith('/path/to/file.jpg', undefined, undefined);
   });
 
   it('should not fetch when path is undefined', () => {

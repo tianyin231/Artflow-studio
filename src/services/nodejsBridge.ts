@@ -65,7 +65,7 @@ export class NodeJSBridge {
       console.log('[NodeJSBridge] Starting Node.js backend...');
 
       // 动态导入 nodejs-mobile-capacitor（可选依赖，仅在Android上需要）
-      // @ts-ignore - 可选依赖，类型声明在 src/types/nodejs-mobile-capacitor.d.ts
+      // @ts-expect-error - 可选依赖，类型声明在 src/types/nodejs-mobile-capacitor.d.ts
       const { NodeJS } = await import('nodejs-mobile-capacitor');
       
       // 设置消息监听器
@@ -183,7 +183,7 @@ export class NodeJSBridge {
     }
 
     try {
-      // @ts-ignore - 可选依赖，类型声明在 src/types/nodejs-mobile-capacitor.d.ts
+      // @ts-expect-error - 可选依赖，类型声明在 src/types/nodejs-mobile-capacitor.d.ts
       const { NodeJS } = await import('nodejs-mobile-capacitor');
       NodeJS.channel.send(message);
     } catch (error) {

@@ -1,12 +1,13 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { render } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import Download from '../../pages/Download';
-import { downloadService } from '../../services/downloadService';
-import { useDownload, useDownloadStatus, useDownloadLogs, useIncompleteTasks } from '../../hooks/useDownload';
+import { downloadService } from '../../services/downloadService'
+import { useDownload, useDownloadStatus, useDownloadLogs, useIncompleteTasks } from '../../hooks/useDownload'
 import type { DownloadTask } from '../../services/api/types';
+import { screen } from '@testing-library/react';
 
 // Mock services
 jest.mock('../../services/downloadService');

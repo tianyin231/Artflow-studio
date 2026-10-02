@@ -1,7 +1,8 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { LoadingWrapper } from '../../../components/common/LoadingWrapper';
+import { render } from '@testing-library/react'
+import { LoadingWrapper } from '../../../components/common/LoadingWrapper'
+import { screen } from '@testing-library/react';
 
 describe('LoadingWrapper', () => {
   it('renders children when loading is false', () => {

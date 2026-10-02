@@ -1,10 +1,11 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { render } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import ProtectedRoute from '../../components/ProtectedRoute';
-import { api } from '../../services/api';
+import { api } from '../../services/api'
+import { screen, waitFor } from '@testing-library/react';
 
 // Mock API
 jest.mock('../../services/api', () => ({

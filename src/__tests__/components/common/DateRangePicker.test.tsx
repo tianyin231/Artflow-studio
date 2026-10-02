@@ -1,8 +1,9 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { DateRangePicker } from '../../../components/common/DateRangePicker';
+import { render } from '@testing-library/react'
+import { DateRangePicker } from '../../../components/common/DateRangePicker'
 import dayjs from 'dayjs';
+import { screen } from '@testing-library/react';
 
 describe('DateRangePicker', () => {
   it('renders correctly', () => {

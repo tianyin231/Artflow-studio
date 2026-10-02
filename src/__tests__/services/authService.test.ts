@@ -2,8 +2,8 @@
  * Tests for authService
  */
 
-import { authService } from '../../services/authService';
-import { api } from '../../services/api';
+import { authService } from '../../services/authService'
+import { api } from '../../services/api'
 
 // Mock the API
 jest.mock('../../services/api', () => ({

@@ -23,7 +23,7 @@ test.describe('Download Management', () => {
     await page.waitForTimeout(2000);
     
     // Check for download buttons or controls
-    const downloadControls = page.locator('button:has-text("Start"), button:has-text("开始"), [data-testid="download-controls"]').first();
+    const _downloadControls = page.locator('button:has-text("Start"), button:has-text("开始"), [data-testid="download-controls"]').first();
     // Just check if page loaded, controls may vary
     await expect(page.locator('body')).toBeVisible();
   });
@@ -33,7 +33,7 @@ test.describe('Download Management', () => {
     await page.waitForTimeout(2000);
     
     // Check for status display
-    const statusDisplay = page.locator('[data-testid="download-status"], .status, [class*="status"]').first();
+    const _statusDisplay = page.locator('[data-testid="download-status"], .status, [class*="status"]').first();
     // Status may not always be visible, so we just check page loaded
     await expect(page.locator('body')).toBeVisible();
   });

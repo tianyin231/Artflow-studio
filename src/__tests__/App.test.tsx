@@ -1,9 +1,10 @@
 /// <reference types="@testing-library/jest-dom" />
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
-import { AppRoutes } from '../AppRoutes';
+import { render } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
+import { AppRoutes } from '../AppRoutes'
+import { screen } from '@testing-library/react';
 
 // Mock all page components
 jest.mock('../pages/Dashboard', () => ({
@@ -68,7 +69,7 @@ describe('App', () => {
     });
   });
 
-  const renderWithProviders = (ui: React.ReactElement) => {
+  const _renderWithProviders = (ui: React.ReactElement) => {
     return render(
       <QueryClientProvider client={queryClient}>
         {ui}
