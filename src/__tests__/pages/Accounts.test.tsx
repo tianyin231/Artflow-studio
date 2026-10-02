@@ -72,6 +72,7 @@ describe('Accounts page', () => {
   });
 
   it('imports refresh token and shows masked preview', async () => {
+    const invalidate = jest.spyOn(queryClient, 'invalidateQueries');
     importToken.mockResolvedValue({ data: { data: { ok: true } } });
     renderPage();
     const input = await screen.findByTestId('input-refresh-token');
@@ -79,6 +80,7 @@ describe('Accounts page', () => {
     fireEvent.click(screen.getByTestId('btn-import-token'));
     await waitFor(() => expect(importToken).toHaveBeenCalled());
     expect(await screen.findByTestId('token-preview')).toHaveTextContent(/\*\*\*\*/);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['authStatus'] });
   });
 
   it('lists accounts and allows switch', async () => {

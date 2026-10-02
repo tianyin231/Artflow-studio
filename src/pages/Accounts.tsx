@@ -25,6 +25,8 @@ import {
   UserSwitchOutlined,
 } from '@ant-design/icons';
 import { api } from '../services/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '../constants';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -37,6 +39,7 @@ function maskToken(token: string): string {
 }
 
 export default function Accounts() {
+  const queryClient = useQueryClient();
   const [form] = Form.useForm();
   const [callbackForm] = Form.useForm();
   const [step, setStep] = useState(0);
@@ -56,6 +59,14 @@ export default function Accounts() {
     } catch {
       setAccounts([]);
     }
+  };
+
+  const refreshSession = async () => {
+    await Promise.all([
+      refreshAccounts(),
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.AUTH_STATUS }),
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CONFIG }),
+    ]);
   };
 
   useEffect(() => {
@@ -89,7 +100,8 @@ export default function Accounts() {
       await api.loginComplete(loginId, values.callback);
       setStep(2);
       message.success('登录完成');
-      await refreshAccounts();
+      callbackForm.resetFields();
+      await refreshSession();
     } catch {
       message.error('回调无效或会话已过期');
     } finally {
@@ -104,7 +116,7 @@ export default function Accounts() {
       setImportedPreview(maskToken(values.refreshToken.trim()));
       message.success('token 已导入');
       form.resetFields(['refreshToken']);
-      await refreshAccounts();
+      await refreshSession();
     } catch {
       message.error('导入失败');
     } finally {
@@ -217,9 +229,13 @@ export default function Accounts() {
                   size="small"
                   icon={<UserSwitchOutlined />}
                   onClick={async () => {
-                    await api.useAccount(item.userId);
-                    message.success(`已切换 ${item.name || item.userId}`);
-                    await refreshAccounts();
+                    try {
+                      await api.useAccount(item.userId);
+                      await refreshSession();
+                      message.success(`已切换 ${item.name || item.userId}`);
+                    } catch {
+                      message.error('切换账号失败');
+                    }
                   }}
                   data-testid={`btn-use-${item.userId}`}
                 >
