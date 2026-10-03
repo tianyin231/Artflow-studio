@@ -10,6 +10,7 @@ import {
   WorkflowSchedulePayload,
   WorkflowTask,
   WorkflowVideoOverrides,
+  WorkflowRenderOptions,
 } from '../services/api/types';
 import { backendStartingRetryDelay, retryBackendStarting } from '../utils/queryRetry';
 
@@ -168,7 +169,7 @@ export function useRerenderWorkflowVideo() {
     }: {
       taskId: string;
       note?: string;
-      options?: { transition?: string; coverTemplate?: string; subtitles?: 'none' | 'srt' | 'ass' };
+      options?: WorkflowRenderOptions;
     }) => (await workflowApi.rerenderVideo(taskId, note, options)).data.data,
     onSuccess: (task) => {
       queryClient.invalidateQueries({ queryKey: WORKFLOW_TASKS_KEY });

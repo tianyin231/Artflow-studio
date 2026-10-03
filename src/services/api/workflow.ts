@@ -22,6 +22,7 @@ import {
   WorkflowPublishOverrides,
   WorkflowPrefilterMode,
   WorkflowVideoOverrides,
+  WorkflowRenderOptions,
 } from './types';
 
 export const workflowApi = {
@@ -62,7 +63,7 @@ export const workflowApi = {
   rerenderVideo: (
     taskId: string,
     note?: string,
-    options?: { transition?: string; coverTemplate?: string; subtitles?: 'none' | 'srt' | 'ass' }
+    options?: WorkflowRenderOptions
   ): Promise<AxiosResponse<ApiResponse<WorkflowTask>>> =>
     apiClient.post(`/workflow/tasks/${taskId}/rerender-video`, { note, options }),
 
