@@ -18,16 +18,17 @@ test.describe('Accounts', () => {
     expect(authorize.searchParams.has('code_verifier')).toBe(false);
     expect(JSON.stringify(start)).not.toContain('codeVerifier');
     await expect(page.getByTestId('authorize-url')).toBeVisible();
-    // Opening after an async API call may be blocked; the explicit link is
-    // the supported browser fallback and must always open the authorization.
-    const [popup] = await Promise.all([
-      context.waitForEvent('page'),
+    // The immediate pixiv:// redirect can prevent Chromium from ever exposing
+    // a popup page. Observe the real link navigation and its HTTP response.
+    await expect(page.getByTestId('authorize-link')).toHaveAttribute('href', start.data.authorizeUrl);
+    const [authorizationRequest] = await Promise.all([
+      context.waitForEvent('request', {
+        predicate: (request) => request.isNavigationRequest() && request.url() === start.data.authorizeUrl,
+      }),
       page.getByTestId('authorize-link').click(),
     ]);
-    if (!popup.isClosed()) await popup.close();
-
-    // Obtain the mock's real redirect; browsers cannot navigate a pixiv:// URL.
-    const redirect = await page.request.get(start.data.authorizeUrl, { maxRedirects: 0 });
+    const redirect = await authorizationRequest.response();
+    if (!redirect) throw new Error('Authorization navigation did not receive an HTTP response');
     expect(redirect.status()).toBe(302);
     const callback = redirect.headers().location;
     expect(callback).toMatch(/^pixiv:\/\/account\/login\?code=/);
