@@ -2,7 +2,7 @@
  * Accounts page RTL tests (F1).
  */
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import Accounts from '../../pages/Accounts';
@@ -33,6 +33,7 @@ describe('Accounts page', () => {
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
     jest.clearAllMocks();
+    delete window.artflow;
     listAccounts.mockResolvedValue({
       data: { data: [{ userId: 'u1', name: 'User One', isDefault: true }] },
     });
@@ -45,6 +46,10 @@ describe('Accounts page', () => {
         },
       },
     });
+  });
+
+  afterEach(() => {
+    delete window.artflow;
   });
 
   const renderPage = () =>
@@ -71,7 +76,46 @@ describe('Accounts page', () => {
     expect(await screen.findByTestId('authorize-url')).toBeInTheDocument();
   });
 
+  it('uses the desktop bridge and completes captured OAuth even before the start response renders', async () => {
+    let callback: ((payload: { loginId: string; callback: string }) => void) | undefined;
+    const cleanup = jest.fn();
+    const invoke = jest.fn().mockImplementation(async (channel: string) => {
+      if (channel === 'auth.startLogin') {
+        callback?.({ loginId: 'desktop-id', callback: 'pixiv://account/login?code=desktop' });
+        return { data: { loginId: 'desktop-id', authorizeUrl: 'https://app-api.pixiv.net/web/v1/login' } };
+      }
+      return { data: { ok: true } };
+    });
+    window.artflow = { invoke, onOauthCallback: (listener) => { callback = listener; return cleanup; } };
+    window.open = jest.fn();
+    const page = renderPage();
+    fireEvent.click(await screen.findByTestId('btn-open-auth'));
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('auth.completeLogin', {
+      loginId: 'desktop-id', callback: 'pixiv://account/login?code=desktop',
+    }));
+    await act(async () => {});
+    expect(screen.getByTestId('btn-complete-login')).toBeDisabled();
+    expect(screen.queryByTestId('authorize-link')).not.toBeInTheDocument();
+    expect(loginStart).not.toHaveBeenCalled();
+    expect(loginComplete).not.toHaveBeenCalled();
+    expect(window.open).not.toHaveBeenCalled();
+    page.unmount();
+    expect(cleanup).toHaveBeenCalled();
+  });
+
+  it('imports desktop tokens through the bridge', async () => {
+    const invoke = jest.fn().mockResolvedValue({ data: { ok: true } });
+    window.artflow = { invoke, onOauthCallback: () => () => {} };
+    renderPage();
+    fireEvent.change(await screen.findByTestId('input-refresh-token'), { target: { value: ' desktop-token ' } });
+    fireEvent.click(screen.getByTestId('btn-import-token'));
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('auth.importToken', { refreshToken: 'desktop-token' }));
+    expect(importToken).not.toHaveBeenCalled();
+    expect(await screen.findByTestId('token-preview')).toHaveTextContent(/\*\*\*\*/);
+  });
+
   it('imports refresh token and shows masked preview', async () => {
+    const invalidate = jest.spyOn(queryClient, 'invalidateQueries');
     importToken.mockResolvedValue({ data: { data: { ok: true } } });
     renderPage();
     const input = await screen.findByTestId('input-refresh-token');
@@ -79,14 +123,47 @@ describe('Accounts page', () => {
     fireEvent.click(screen.getByTestId('btn-import-token'));
     await waitFor(() => expect(importToken).toHaveBeenCalled());
     expect(await screen.findByTestId('token-preview')).toHaveTextContent(/\*\*\*\*/);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['authStatus'] });
   });
 
   it('lists accounts and allows switch', async () => {
+    listAccounts.mockResolvedValue({ data: { data: [{ userId: 'u1', name: 'User One', isDefault: false }] } });
     useAccount.mockResolvedValue({ data: { data: { ok: true } } });
     renderPage();
     expect(await screen.findByTestId('account-u1')).toHaveTextContent('User One');
     fireEvent.click(screen.getByTestId('btn-use-u1'));
     await waitFor(() => expect(useAccount).toHaveBeenCalledWith('u1'));
+  });
+
+  it('shows account load errors and allows retry', async () => {
+    listAccounts.mockRejectedValueOnce(new Error('Account service unavailable'));
+    renderPage();
+    expect(await screen.findByTestId('accounts-error')).toHaveTextContent('Account service unavailable');
+    fireEvent.click(screen.getByRole('button', { name: /重\s*试/ }));
+    expect(await screen.findByTestId('account-u1')).toBeInTheDocument();
+    expect(screen.queryByTestId('accounts-error')).not.toBeInTheDocument();
+  });
+
+  it('requires a started login and consumes its session after completion', async () => {
+    window.open = jest.fn();
+    loginComplete.mockResolvedValue({ data: { data: { ok: true } } });
+    renderPage();
+    expect(screen.getByTestId('btn-complete-login')).toBeDisabled();
+    fireEvent.click(screen.getByTestId('btn-open-auth'));
+    expect(await screen.findByTestId('authorize-link')).toHaveAttribute('href', expect.stringContaining('https://example.invalid'));
+    fireEvent.change(screen.getByTestId('input-callback'), { target: { value: '  pixiv://account/login?code=abc  ' } });
+    fireEvent.click(screen.getByTestId('btn-complete-login'));
+    await waitFor(() => expect(loginComplete).toHaveBeenCalledWith('lid-1', 'pixiv://account/login?code=abc'));
+    await waitFor(() => expect(screen.getByTestId('btn-complete-login')).toBeDisabled());
+    expect(screen.queryByTestId('authorize-link')).not.toBeInTheDocument();
+  });
+
+  it('rejects blank tokens without sending an import request', async () => {
+    renderPage();
+    fireEvent.change(screen.getByTestId('input-refresh-token'), { target: { value: '   ' } });
+    fireEvent.click(screen.getByTestId('btn-import-token'));
+    expect(await screen.findByText('请粘贴 token')).toBeInTheDocument();
+    expect(importToken).not.toHaveBeenCalled();
   });
 
   it('proxy test renders results', async () => {

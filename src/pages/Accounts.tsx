@@ -2,7 +2,7 @@
  * Accounts & Connections — Pixiv host login, token import, accounts, proxy test.
  * Replaces password automation. Tokens are never displayed in full.
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Button,
@@ -25,6 +25,8 @@ import {
   UserSwitchOutlined,
 } from '@ant-design/icons';
 import { api } from '../services/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '../constants';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -36,77 +38,134 @@ function maskToken(token: string): string {
   return `${token.slice(0, 2)}****${token.slice(-4)}`;
 }
 
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export default function Accounts() {
+  const queryClient = useQueryClient();
   const [form] = Form.useForm();
   const [callbackForm] = Form.useForm();
   const [step, setStep] = useState(0);
   const [authorizeUrl, setAuthorizeUrl] = useState('');
   const [loginId, setLoginId] = useState('');
+  const capturedDesktopSession = useRef('');
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accountsError, setAccountsError] = useState('');
+  const [accountsLoading, setAccountsLoading] = useState(false);
+  const [switchingAccount, setSwitchingAccount] = useState('');
   const [proxyResults, setProxyResults] = useState<
     { target: string; ok: boolean; latencyMs?: number; error?: string }[]
   >([]);
   const [loading, setLoading] = useState(false);
   const [importedPreview, setImportedPreview] = useState('');
 
-  const refreshAccounts = async () => {
+  const refreshAccounts = useCallback(async () => {
+    setAccountsLoading(true);
     try {
       const res = await api.listAccounts();
-      setAccounts(res.data?.data ?? []);
-    } catch {
-      setAccounts([]);
+      if (!Array.isArray(res.data?.data)) throw new Error('账号列表响应无效');
+      setAccounts(res.data.data);
+      setAccountsError('');
+    } catch (error) {
+      setAccountsError(errorMessage(error, '加载账号失败'));
+    } finally {
+      setAccountsLoading(false);
     }
-  };
+  }, []);
+
+  const refreshSession = useCallback(async () => {
+    await Promise.all([
+      refreshAccounts(),
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.AUTH_STATUS }),
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CONFIG }),
+    ]);
+  }, [queryClient, refreshAccounts]);
 
   useEffect(() => {
     void refreshAccounts();
-  }, []);
+  }, [refreshAccounts]);
 
   const handleStartLogin = async () => {
+    capturedDesktopSession.current = '';
     setLoading(true);
     try {
-      const res = await api.loginStart();
-      const data = res.data?.data;
-      if (data?.authorizeUrl) {
+      const data = window.artflow
+        ? (await window.artflow.invoke('auth.startLogin')).data
+        : (await api.loginStart()).data?.data;
+      if (data?.authorizeUrl && data.loginId) {
+        // A fast redirect can arrive before the IPC start response.
+        if (capturedDesktopSession.current === data.loginId) return;
         setAuthorizeUrl(data.authorizeUrl);
         setLoginId(data.loginId);
         setStep(1);
-        window.open(data.authorizeUrl, '_blank', 'noopener,noreferrer');
-        message.success('已打开授权链接，请在浏览器完成登录后粘贴回调 URL');
+        if (window.artflow) {
+          message.success('已打开授权窗口，完成登录后会自动接收回调');
+        } else {
+          const opened = window.open(data.authorizeUrl, '_blank', 'noopener,noreferrer');
+          if (!opened) {
+            message.info('授权链接已生成，请点击下方链接打开登录页面');
+          } else {
+            message.success('已打开授权链接，请在浏览器完成登录后粘贴回调 URL');
+          }
+        }
       } else {
         message.error('未能获取授权链接');
       }
-    } catch (e) {
-      message.error('登录启动失败');
+    } catch (error) {
+      message.error(errorMessage(error, '登录启动失败'));
     } finally {
-      setLoading(false);
+      if (!capturedDesktopSession.current) setLoading(false);
     }
   };
 
-  const handleComplete = async (values: { callback: string }) => {
+  const completeLogin = useCallback(async (sessionId: string, callback: string) => {
     setLoading(true);
     try {
-      await api.loginComplete(loginId, values.callback);
+      if (window.artflow) {
+        await window.artflow.invoke('auth.completeLogin', { loginId: sessionId, callback: callback.trim() });
+      } else {
+        await api.loginComplete(sessionId, callback.trim());
+      }
       setStep(2);
+      setLoginId('');
+      setAuthorizeUrl('');
       message.success('登录完成');
-      await refreshAccounts();
-    } catch {
-      message.error('回调无效或会话已过期');
+      callbackForm.resetFields();
+      await refreshSession();
+    } catch (error) {
+      setLoginId('');
+      setAuthorizeUrl('');
+      setStep(0);
+      message.error(`${errorMessage(error, '回调无效或会话已过期')}，请重新打开授权`);
     } finally {
       setLoading(false);
     }
+  }, [callbackForm, refreshSession]);
+
+  useEffect(() => window.artflow?.onOauthCallback(({ loginId: sessionId, callback }) => {
+    capturedDesktopSession.current = sessionId;
+    void completeLogin(sessionId, callback);
+  }), [completeLogin]);
+
+  const handleComplete = async (values: { callback: string }) => {
+    if (loginId) await completeLogin(loginId, values.callback);
   };
 
   const handleImportToken = async (values: { refreshToken: string }) => {
     setLoading(true);
     try {
-      await api.importToken(values.refreshToken.trim());
+      if (window.artflow) {
+        await window.artflow.invoke('auth.importToken', { refreshToken: values.refreshToken.trim() });
+      } else {
+        await api.importToken(values.refreshToken.trim());
+      }
       setImportedPreview(maskToken(values.refreshToken.trim()));
       message.success('token 已导入');
       form.resetFields(['refreshToken']);
-      await refreshAccounts();
-    } catch {
-      message.error('导入失败');
+      await refreshSession();
+    } catch (error) {
+      message.error(errorMessage(error, '导入失败'));
     } finally {
       setLoading(false);
     }
@@ -157,9 +216,14 @@ export default function Accounts() {
               showIcon
               message="授权链接已生成"
               description={
-                <Paragraph copyable={{ text: authorizeUrl }} data-testid="authorize-url">
-                  {authorizeUrl.slice(0, 80)}…
-                </Paragraph>
+                <Space direction="vertical">
+                  <a href={authorizeUrl} target="_blank" rel="noopener noreferrer" data-testid="authorize-link">
+                    打开授权链接
+                  </a>
+                  <Paragraph copyable={{ text: authorizeUrl }} data-testid="authorize-url">
+                    {authorizeUrl.slice(0, 80)}…
+                  </Paragraph>
+                </Space>
               }
             />
           )}
@@ -167,7 +231,7 @@ export default function Accounts() {
             <Form.Item
               label="粘贴回调 URL 或 code"
               name="callback"
-              rules={[{ required: true, message: '请粘贴回调 URL' }]}
+              rules={[{ required: true, whitespace: true, message: '请粘贴回调 URL' }]}
             >
               <Input.TextArea
                 rows={2}
@@ -175,7 +239,7 @@ export default function Accounts() {
                 data-testid="input-callback"
               />
             </Form.Item>
-            <Button htmlType="submit" loading={loading} data-testid="btn-complete-login">
+            <Button htmlType="submit" loading={loading} disabled={!loginId} data-testid="btn-complete-login">
               完成登录
             </Button>
           </Form>
@@ -187,7 +251,7 @@ export default function Accounts() {
           <Form.Item
             label="refresh_token"
             name="refreshToken"
-            rules={[{ required: true, message: '请粘贴 token' }]}
+            rules={[{ required: true, whitespace: true, message: '请粘贴 token' }]}
           >
             <Input.Password placeholder="仅保存在本地，界面不会完整显示" data-testid="input-refresh-token" />
           </Form.Item>
@@ -205,7 +269,18 @@ export default function Accounts() {
       </Card>
 
       <Card title="账号列表" style={{ marginTop: 16 }} data-testid="accounts-list-card">
+        {accountsError && (
+          <Alert
+            type="error"
+            showIcon
+            message={accountsError}
+            action={<Button size="small" onClick={() => void refreshAccounts()}>重试</Button>}
+            style={{ marginBottom: 16 }}
+            data-testid="accounts-error"
+          />
+        )}
         <List
+          loading={accountsLoading}
           dataSource={accounts}
           locale={{ emptyText: '暂无账号' }}
           data-testid="accounts-list"
@@ -216,10 +291,19 @@ export default function Accounts() {
                   key="use"
                   size="small"
                   icon={<UserSwitchOutlined />}
+                  loading={switchingAccount === item.userId}
+                  disabled={loading || Boolean(switchingAccount) || item.isDefault || Boolean(accountsError)}
                   onClick={async () => {
-                    await api.useAccount(item.userId);
-                    message.success(`已切换 ${item.name || item.userId}`);
-                    await refreshAccounts();
+                    setSwitchingAccount(item.userId);
+                    try {
+                      await api.useAccount(item.userId);
+                      await refreshSession();
+                      message.success(`已切换 ${item.name || item.userId}`);
+                    } catch (error) {
+                      message.error(errorMessage(error, '切换账号失败'));
+                    } finally {
+                      setSwitchingAccount('');
+                    }
                   }}
                   data-testid={`btn-use-${item.userId}`}
                 >

@@ -1,24 +1,24 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('smoke', () => {
-  test('all routes render non-empty content on production build', async ({ page }) => {
-    const errors: string[] = [];
-    page.on('console', (m) => {
-      if (m.type() === 'error') errors.push(m.text());
-    });
-    page.on('pageerror', (e) => errors.push(e.message));
-
-    for (const path of ['/', '/dashboard', '/accounts', '/publish-platforms', '/config', '/files', '/logs']) {
-      await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await page.waitForTimeout(800);
-      const body = await page.locator('body').innerText();
-      expect(body.length, `empty body at ${path}`).toBeGreaterThan(10);
-      await page.screenshot({ path: `test-results/screens/F2-M1-smoke${path.replace(/\//g, '_') || '_root'}.png` });
-    }
-
-    const real = errors.filter(
-      (e) => !/Warning:|deprecated|useForm|favicon/i.test(e)
-    );
-    expect(real, `console errors: ${real.join(' | ')}`).toEqual([]);
+test('production routes render their page content without runtime errors', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
   });
+  page.on('pageerror', (error) => errors.push(error.message));
+
+  for (const [path, heading] of [
+    ['/', /^Pixiv Auto Flow$/],
+    ['/dashboard', /^Pixiv Auto Flow$/],
+    ['/accounts', /账号与连接/],
+    ['/publish-platforms', /发布平台/],
+    ['/config', /配置管理|Configuration Management/],
+    ['/files', /文件浏览|File Browser/],
+    ['/logs', /日志查看|Logs/],
+  ] as const) {
+    await page.goto(path);
+    const content = path === '/' || path === '/dashboard' ? page.locator('.paf-page') : page;
+    await expect(content.getByRole('heading', { name: heading }).first(), `page content at ${path}`).toBeVisible();
+  }
+  expect(errors.filter((error) => !/Warning:|deprecated|useForm|favicon/i.test(error))).toEqual([]);
 });
