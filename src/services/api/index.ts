@@ -14,6 +14,7 @@ export { logsApi } from './logs';
 export { statsApi } from './stats';
 export { systemApi } from './system';
 export { workflowApi } from './workflow';
+export { publisherApi } from './publishers';
 
 // Export client and utilities
 export { apiClient, createApiClient, createCustomApiClient } from './client';
@@ -32,6 +33,7 @@ import { logsApi } from './logs';
 import { statsApi } from './stats';
 import { systemApi } from './system';
 import { workflowApi } from './workflow';
+import { publisherApi } from './publishers';
 
 /**
  * Unified API object for backward compatibility
@@ -50,14 +52,8 @@ export const api = {
   listAccounts: authApi.listAccounts,
   useAccount: authApi.useAccount,
   proxyTest: authApi.proxyTest,
-  listPublishers: async () => {
-    const { apiClient } = await import('./client');
-    return apiClient.get('/publishers');
-  },
-  dryRunPublish: async (id: string) => {
-    const { apiClient } = await import('./client');
-    return apiClient.post(`/publishers/${encodeURIComponent(id)}/dry-run`, {});
-  },
+  listPublishers: publisherApi.list,
+  dryRunPublish: publisherApi.dryRun,
 
   // Configuration
   getConfig: configApi.getConfig,
