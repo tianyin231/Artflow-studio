@@ -2,7 +2,7 @@
 import React from 'react';
 import { render } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Outlet } from 'react-router-dom'
 import { AppRoutes } from '../AppRoutes'
 import { screen } from '@testing-library/react';
 
@@ -42,10 +42,15 @@ jest.mock('../pages/Login', () => ({
   default: () => <div>Login Page</div>,
 }));
 
+jest.mock('../pages/Accounts', () => ({
+  __esModule: true,
+  default: () => <div>Accounts Page</div>,
+}));
+
 jest.mock('../components/Layout/AppLayout', () => ({
   __esModule: true,
   default: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="app-layout">{children}</div>
+    <div data-testid="app-layout">{children}<Outlet /></div>
   ),
 }));
 
@@ -77,7 +82,7 @@ describe('App', () => {
     );
   };
 
-  it('renders login page at /login', async () => {
+  it('redirects legacy login to accounts inside the app layout', async () => {
     render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={['/login']}>
@@ -85,7 +90,21 @@ describe('App', () => {
         </MemoryRouter>
       </QueryClientProvider>
     );
-    expect(await screen.findByText('Login Page')).toBeInTheDocument();
+    expect(await screen.findByText('Accounts Page')).toBeInTheDocument();
+    expect(screen.getByTestId('app-layout')).toContainElement(screen.getByText('Accounts Page'));
+    expect(screen.queryByText('Login Page')).not.toBeInTheDocument();
+  });
+
+  it('keeps accounts navigation inside the app layout', async () => {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/accounts']}>
+          <AppRoutes />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    expect(await screen.findByText('Accounts Page')).toBeInTheDocument();
+    expect(screen.getByTestId('app-layout')).toContainElement(screen.getByText('Accounts Page'));
   });
 
   it('redirects root path to dashboard', async () => {
@@ -166,4 +185,3 @@ describe('App', () => {
     expect(await screen.findByTestId('app-layout')).toBeInTheDocument();
   });
 });
-
