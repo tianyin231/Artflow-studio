@@ -1,10 +1,12 @@
 appId: com.artflow.desktop
 productName: Artflow
+executableName: artflow
+asar: true
 directories:
   output: dist_electron
 files:
   - dist/**
-  - electron/**
+  - electron/*.cjs
   - package.json
 extraMetadata:
   main: electron/main.cjs

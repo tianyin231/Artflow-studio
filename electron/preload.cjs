@@ -9,5 +9,10 @@ contextBridge.exposeInMainWorld('artflow', {
     }
     return ipcRenderer.invoke(channel, ...args);
   },
-  onOauthCallback: (cb) => ipcRenderer.on('oauth-callback', (_e, url) => cb(url)),
+  onOauthCallback: (cb) => {
+    if (typeof cb !== 'function') throw new TypeError('callback required');
+    const listener = (_event, payload) => cb(payload);
+    ipcRenderer.on('oauth-callback', listener);
+    return () => ipcRenderer.removeListener('oauth-callback', listener);
+  },
 });
