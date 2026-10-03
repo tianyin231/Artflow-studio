@@ -1,17 +1,20 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Navigation', () => {
-  test('should load root without crash', async ({ page }) => {
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(800);
-    const url = page.url();
-    expect(url).toContain('127.0.0.1');
-    await page.screenshot({ path: 'test-results/screens/nav-root.png' });
+  test('root renders the dashboard after redirect', async ({ page }) => {
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page.locator('.paf-page').getByRole('heading', { name: 'Pixiv Auto Flow' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '按当前参数启动', exact: true })).toBeEnabled();
   });
 
-  test('can open dashboard route', async ({ page }) => {
-    await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-    expect(await page.locator('body').count()).toBe(1);
+  test('menu navigation opens publishers and returns to dashboard', async ({ page }) => {
+    await page.goto('/dashboard');
+    await page.getByRole('menuitem', { name: '发布平台', exact: true }).click();
+    await expect(page).toHaveURL(/\/publish-platforms$/);
+    await expect(page.getByTestId('platform-bilibili')).toBeVisible();
+    await page.getByRole('menuitem', { name: /仪表盘|Dashboard/, exact: true }).click();
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page.getByRole('button', { name: '按当前参数启动', exact: true })).toBeVisible();
   });
 });

@@ -1,104 +1,81 @@
 import { test, expect, type Page } from '@playwright/test';
+import { apiResponse, getTask, mockBaseURL, publishPackage } from './helpers';
 
 async function createDryRunViaUi(page: Page) {
-  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('text=Pixiv Auto Flow', { timeout: 20000 });
-
-  // Fill command and submit via API from UI context is not enough — use UI form if present
-  const cmd = page.locator('textarea').first();
-  if (await cmd.count()) {
-    await cmd.fill('本周鸣潮主题 收藏数500+ 做成卡点视频');
-  }
-
-  // Create task via core API (same origin through preview proxy)
-  const res = await page.request.post('http://127.0.0.1:3300/api/workflow/tasks', {
-    data: {
-      dryRunDownload: true,
-      instruction: '本周鸣潮主题 收藏数500+ 做成卡点视频',
-    },
+  await page.goto('/dashboard');
+  await expect(page.locator('.paf-page').getByRole('heading', { name: 'Pixiv Auto Flow' })).toBeVisible();
+  await page.getByPlaceholder('可输入：本周鸣潮 收藏数500+ 卡点视频。也可以留空，只用表单启动。').fill('fixture Artflow E2E');
+  await page.getByLabel('目标标签', { exact: true }).fill('fixture');
+  await page.getByLabel('抓取数量', { exact: true }).fill('3');
+  await page.getByLabel('收藏阈值', { exact: true }).fill('0');
+  await page.getByRole('checkbox', { name: '只使用本地素材' }).check();
+  const [response] = await Promise.all([
+    apiResponse(page, '/api/workflow/tasks'),
+    page.getByRole('button', { name: '按当前参数启动', exact: true }).click(),
+  ]);
+  expect(response.status()).toBe(200);
+  expect(response.request().postDataJSON()).toMatchObject({
+    command: 'fixture Artflow E2E', dryRunDownload: true,
+    pixivOverrides: { tag: 'fixture', limit: 3, minBookmarks: 0 },
   });
-  expect(res.status()).toBe(200);
-  const created = await res.json();
-  return created.data.id as string;
+  const { data } = await response.json();
+  expect(data.id).toEqual(expect.any(String));
+  await expect.poll(async () => (await getTask(page.request, data.id)).status, {
+    timeout: 30000, intervals: [200, 500, 1000],
+  }).toBe('asset_review_required');
+  await expect(page.getByText(`任务 ${data.id}`, { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '展开审核', exact: true })).toBeVisible();
+  return data.id as string;
 }
 
-test.describe('workflow-e2e', () => {
-  test('dry-run workflow reaches asset review via UI and API', async ({ page }) => {
-    await createDryRunViaUi(page);
-
-    let status = 'running';
-    for (let i = 0; i < 30; i++) {
-      const list = await page.request.get('http://127.0.0.1:3300/api/workflow/tasks');
-      expect(list.status()).toBe(200);
-      const body = await list.json();
-      status = body.data?.[0]?.status || 'running';
-      if (status === 'asset_review_required' || status === 'failed' || status === 'completed') break;
-      await page.waitForTimeout(1000);
-    }
-    expect(status).toBe('asset_review_required');
-
-    // UI shows the workflow pipeline
-    await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(1500);
-    const bodyText = await page.locator('body').innerText();
-    expect(bodyText).toContain('工作流');
-    await page.screenshot({ path: 'test-results/screens/F2-M1-workflow-assets.png' });
+test.describe('Workflow', () => {
+  test('dashboard form creates the requested task and displays asset review', async ({ page }) => {
+    const id = await createDryRunViaUi(page);
+    const task = await getTask(page.request, id);
+    expect(task.assets.length).toBeGreaterThan(0);
+    expect(task.status).toBe('asset_review_required');
+    await expect(page.getByRole('button', { name: '按当前选择继续', exact: true }).first()).toBeEnabled();
   });
 
-  test('asset review reject/accept updates task', async ({ page }) => {
-    await createDryRunViaUi(page);
-    let status = 'running';
-    for (let i = 0; i < 30; i++) {
-      const list = await page.request.get('http://127.0.0.1:3300/api/workflow/tasks');
-      const body = await list.json();
-      status = body.data?.[0]?.status || 'running';
-      if (status === 'asset_review_required') break;
-      await page.waitForTimeout(1000);
-    }
-    expect(status).toBe('asset_review_required');
+  test('asset reject and accept in the UI persist on the created task', async ({ page }) => {
+    const id = await createDryRunViaUi(page);
+    const task = await getTask(page.request, id);
+    const asset = task.assets[0];
+    expect(asset.name).toEqual(expect.any(String));
+    await page.getByRole('button', { name: '展开审核', exact: true }).click();
+    const card = page.locator('.dashboard-asset-card').filter({ has: page.getByText(asset.name, { exact: true }) });
+    await expect(card).toBeVisible();
+    const assetPath = `/api/workflow/tasks/${id}/assets/${encodeURIComponent(asset.name)}`;
+    const [rejected] = await Promise.all([
+      apiResponse(page, assetPath, 'PATCH'),
+      card.getByRole('button', { name: '剔除', exact: true }).click(),
+    ]);
+    expect(rejected.status()).toBe(200);
+    expect((await getTask(page.request, id)).assets.find((item: { name: string }) => item.name === asset.name).status).toBe('rejected');
+    await expect(card.getByRole('button', { name: '剔除', exact: true })).toBeDisabled();
 
-    const tasks = await (await page.request.get('http://127.0.0.1:3300/api/workflow/tasks')).json();
-    const taskId = tasks.data[0].id;
-    const assets = tasks.data[0].assets || [];
-    expect(assets.length).toBeGreaterThan(0);
-
-    // Reject one asset via API (UI panel uses same endpoint)
-    const reject = await page.request.patch(
-      `http://127.0.0.1:3300/api/workflow/tasks/${taskId}/assets/${encodeURIComponent(assets[0].name)}`,
-      { data: { status: 'rejected', reason: 'e2e reject' } }
-    );
-    expect(reject.status()).toBe(200);
-
-    const after = await (await page.request.get(`http://127.0.0.1:3300/api/workflow/tasks/${taskId}`)).json();
-    const a0 = after.data.assets.find((a: { name: string }) => a.name === assets[0].name);
-    expect(a0.status).toBe('rejected');
-    await page.screenshot({ path: 'test-results/screens/F2-M1-workflow-review.png' });
+    const [accepted] = await Promise.all([
+      apiResponse(page, assetPath, 'PATCH'),
+      card.getByRole('button', { name: '通过', exact: true }).click(),
+    ]);
+    expect(accepted.status()).toBe(200);
+    expect((await getTask(page.request, id)).assets.find((item: { name: string }) => item.name === asset.name).status).toBe('accepted');
+    await expect(card.getByRole('button', { name: '通过', exact: true })).toBeDisabled();
   });
 
-  test('publish dry-run for multiple platforms succeeds', async ({ request }) => {
-    const platforms = ['local-export', 'wallpaper-engine-package', 'bilibili', 'youtube', 'telegram'];
-    for (const id of platforms) {
-      const res = await request.post(`http://127.0.0.1:3300/api/publishers/${id}/dry-run`, {
-        data: {
-          taskId: 'e2e-multi',
-          videoPath: '',
-          coverPath: '',
-          title: 'E2E Title',
-          description: 'E2E desc',
-          tags: ['Anime'],
-          aspectRatio: '16:9',
-          durationSec: 5,
-          sizeBytes: 1024,
-          sources: [],
-        },
-      });
-      expect(res.status()).toBe(200);
-      const body = await res.json();
-      expect(['dry_run', 'exported', 'submitted', 'auth_required']).toContain(body.data.status);
+  test('platform dry-runs return dry_run without issuing publisher network requests', async ({ request }) => {
+    const before = await request.get(`${mockBaseURL}/__requests`);
+    expect(before.status()).toBe(200);
+    const prior = (await before.json()).requests.length;
+    for (const id of ['local-export', 'wallpaper-engine-package', 'bilibili', 'youtube', 'telegram']) {
+      const response = await request.post(`/api/publishers/${id}/dry-run`, { data: publishPackage });
+      expect(response.status()).toBe(200);
+      const { data } = await response.json();
+      expect(data.status, `${id}: ${data.message || ''}`).toBe('dry_run');
     }
-
-    // mock server received requests
-    const mock = await request.get('http://127.0.0.1:3302/__requests');
-    expect(mock.status()).toBe(200);
+    const after = await request.get(`${mockBaseURL}/__requests`);
+    expect(after.status()).toBe(200);
+    const calls = (await after.json()).requests.slice(prior);
+    expect(calls.filter((call: { method: string }) => call.method !== 'GET' && call.method !== 'HEAD')).toEqual([]);
   });
 });

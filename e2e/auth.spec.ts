@@ -1,21 +1,22 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Authentication', () => {
-  test('should display login page or app shell', async ({ page }) => {
-    await page.goto('/login', { waitUntil: 'networkidle', timeout: 30000 }).catch(() => undefined);
-    await page.waitForTimeout(1500);
-    await page.screenshot({ path: 'test-results/screens/auth-login.png' });
-    const body = await page.locator('body').innerText().catch(() => '');
-    const html = await page.content();
-    expect(html.length).toBeGreaterThan(50);
-    // body text may be empty during loading; page must still render
-    expect(await page.locator('body').count()).toBe(1);
-    void body;
+test.describe('Authentication entry points', () => {
+  test('legacy login route redirects to accounts and exposes supported methods', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page).toHaveURL(/\/accounts$/);
+    await expect(page.getByTestId('btn-open-auth')).toBeVisible();
+    await expect(page.getByTestId('input-refresh-token')).toBeEditable();
+    await expect(page.locator('input[type="password"]')).toHaveCount(1);
+    await expect(page.getByText('账号密码登录', { exact: true })).toHaveCount(0);
   });
 
-  test('deprecated password form is not required', async ({ page }) => {
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-    expect(page.url()).toBeTruthy();
+  test('dashboard stays usable while authentication guidance is shown', async ({ page }) => {
+    await page.route('**/api/auth/status', (route) => route.fulfill({
+      json: { data: { isAuthenticated: false, hasToken: false } },
+    }));
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page.locator('.paf-page').getByRole('heading', { name: 'Pixiv Auto Flow' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /立即登录|Login Now/ })).toBeVisible();
   });
 });
