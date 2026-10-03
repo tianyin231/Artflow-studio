@@ -1,36 +1,10 @@
 import { test, expect } from '@playwright/test';
 
-/**
- * Dashboard E2E Tests
- * 
- * Tests the dashboard page functionality.
- */
-test.describe('Dashboard', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to dashboard
-    // Note: In a real scenario, you might need to authenticate first
-    await page.goto('/dashboard');
-  });
-
-  test('should display dashboard page', async ({ page }) => {
-    // Wait for page to load
-    await page.waitForLoadState('networkidle');
-    
-    // Check if dashboard content is visible
-    // This will depend on the actual dashboard implementation
-    const dashboardContent = page.locator('body');
-    await expect(dashboardContent).toBeVisible();
-  });
-
-  test('should display statistics', async ({ page }) => {
-    // Wait for statistics to load
-    await page.waitForTimeout(2000);
-    
-    // Check for statistics elements (adjust selectors based on actual implementation)
-    const statsSection = page.locator('[data-testid="stats"], .stats, [class*="stat"]').first();
-    if (await statsSection.isVisible()) {
-      await expect(statsSection).toBeVisible();
-    }
-  });
+test('dashboard exposes editable collection and video parameters', async ({ page }) => {
+  await page.goto('/dashboard');
+  await expect(page.locator('.paf-page').getByRole('heading', { name: 'Pixiv Auto Flow' })).toBeVisible();
+  await expect(page.getByLabel('目标标签')).toBeEditable();
+  await expect(page.getByLabel('抓取数量')).toBeEditable();
+  await expect(page.getByRole('checkbox', { name: '只使用本地素材' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /按当前参数启动$/ })).toBeEnabled();
 });
-
