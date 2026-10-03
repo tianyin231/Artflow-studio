@@ -74,7 +74,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['vite.svg'],
+      includeAssets: ['artflow.svg', 'icons/*.png'],
       manifest: {
         name: 'Artflow',
         short_name: 'Artflow',
@@ -82,13 +82,18 @@ export default defineConfig({
         theme_color: '#111827',
         background_color: '#111827',
         display: 'standalone',
+        id: '/',
+        scope: '/',
         start_url: '/',
-        icons: [{ src: '/vite.svg', sizes: 'any', type: 'image/svg+xml' }],
+        icons: [
+          { src: '/icons/artflow-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icons/artflow-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+        ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/],
+        navigateFallbackDenylist: [/^\/(?:api|socket\.io)(?:\/|\?|$)/],
         // vendor antd.esm.js is ~3.7MB; allow it in precache or skip
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
       },

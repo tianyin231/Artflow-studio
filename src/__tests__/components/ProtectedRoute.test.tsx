@@ -70,6 +70,22 @@ describe('ProtectedRoute', () => {
     });
   });
 
+  it('renders the app shell offline while the first authentication request is pending', () => {
+    const online = jest.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    (api.getAuthStatus as jest.Mock).mockImplementation(() => new Promise(() => {}));
+    try {
+      renderWithProviders(
+        <ProtectedRoute>
+          <div>Offline App Shell</div>
+        </ProtectedRoute>
+      );
+      expect(screen.getByText('Offline App Shell')).toBeInTheDocument();
+      expect(document.querySelector('.ant-spin')).not.toBeInTheDocument();
+    } finally {
+      online.mockRestore();
+    }
+  });
+
   it('redirects to login when not authenticated', async () => {
     (api.getAuthStatus as jest.Mock).mockResolvedValue({
       data: {
@@ -145,4 +161,3 @@ describe('ProtectedRoute', () => {
     });
   });
 });
-

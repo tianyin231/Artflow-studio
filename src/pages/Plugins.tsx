@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Card, List, Switch, Tag, Typography, Alert, Space } from 'antd';
+import { Card, List, Switch, Tag, Typography, Alert, Space, message } from 'antd';
 import { ApiOutlined, CloudUploadOutlined, FolderOutlined } from '@ant-design/icons';
+import { isRecord, readLocalJson, writeLocalJson } from '../utils/localStorage';
 
 const { Title, Paragraph } = Typography;
 
@@ -31,19 +32,45 @@ const PLUGINS = [
   },
 ];
 
+const STORAGE_KEY = 'artflow-plugin-preferences-v1';
+
+function isPreferences(value: unknown): value is Record<string, boolean> {
+  return isRecord(value) && Object.values(value).every((enabled) => typeof enabled === 'boolean');
+}
+
 export default function Plugins() {
-  const [plugins, setPlugins] = useState(PLUGINS);
+  const [plugins, setPlugins] = useState(() => {
+    const preferences = readLocalJson(STORAGE_KEY, {} as Record<string, boolean>, isPreferences);
+    return PLUGINS.map((plugin) => ({
+      ...plugin,
+      enabled: preferences[plugin.id] ?? plugin.enabled,
+    }));
+  });
+
+  const setEnabled = (id: string, enabled: boolean) => {
+    const next = plugins.map((plugin) => (plugin.id === id ? { ...plugin, enabled } : plugin));
+    if (
+      !writeLocalJson(
+        STORAGE_KEY,
+        Object.fromEntries(next.map((plugin) => [plugin.id, plugin.enabled]))
+      )
+    ) {
+      message.error('无法保存插件偏好，请检查浏览器存储权限或空间');
+      return;
+    }
+    setPlugins(next);
+  };
   return (
     <div data-testid="plugins-page" style={{ padding: 24 }}>
       <Title level={2}>
         <ApiOutlined /> 插件
       </Title>
-      <Paragraph type="secondary">第三方 Publisher / Source 扩展，独立子进程运行</Paragraph>
+      <Paragraph type="secondary">Publisher / Source 扩展示例与本地启用偏好</Paragraph>
       <Alert
         type="info"
         showIcon
-        message="网络白名单"
-        description="插件只能访问 manifest.permissions.network 声明的域名；未声明域名会被拒绝。"
+        message="本地插件预览"
+        description="权限列表为示例声明。启用偏好仅保存在此浏览器，插件执行服务尚未接入。"
         style={{ marginBottom: 16 }}
       />
       <List
@@ -63,10 +90,9 @@ export default function Plugins() {
             extra={
               <Switch
                 checked={p.enabled}
+                aria-label={`${p.name} 启用偏好`}
                 data-testid={`toggle-${p.id}`}
-                onChange={(v) =>
-                  setPlugins((prev) => prev.map((x) => (x.id === p.id ? { ...x, enabled: v } : x)))
-                }
+                onChange={(v) => setEnabled(p.id, v)}
               />
             }
           >

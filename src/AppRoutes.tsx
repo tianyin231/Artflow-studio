@@ -18,7 +18,6 @@ const UrlDownload = lazy(() => import('./pages/UrlDownload'));
 const History = lazy(() => import('./pages/History'));
 const Logs = lazy(() => import('./pages/Logs'));
 const Files = lazy(() => import('./pages/Files'));
-const Login = lazy(() => import('./pages/Login'));
 const Accounts = lazy(() => import('./pages/Accounts'));
 const PublishPlatforms = lazy(() => import('./pages/PublishPlatforms'));
 const TemplateLibrary = lazy(() => import('./pages/TemplateLibrary'));
@@ -33,8 +32,7 @@ export function AppRoutes() {
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/accounts" element={<Accounts />} />
+        <Route path="/login" element={<Navigate to="/accounts" replace />} />
         <Route
           path="/"
           element={

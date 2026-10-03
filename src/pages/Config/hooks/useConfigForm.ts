@@ -65,7 +65,9 @@ export function useConfigForm() {
   };
 
   const getConfigPreview = () => {
-    return JSON.stringify(form.getFieldsValue(), null, 2);
+    // Config tabs mount fields lazily. Include the complete form store so
+    // previewing from the file-management tab still shows the loaded config.
+    return JSON.stringify(form.getFieldsValue(true), null, 2);
   };
 
   return {
@@ -147,4 +149,3 @@ const formatConfigSaveError = (
     t('config.saveFailed')
   );
 };
-
