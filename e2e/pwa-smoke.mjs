@@ -5,11 +5,16 @@ import { fileURLToPath } from 'node:url';
 import { preview } from 'vite';
 import { chromium } from 'playwright';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root = process.env.ARTFLOW_PWA_ROOT
+  ? path.resolve(process.env.ARTFLOW_PWA_ROOT)
+  : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const core = http.createServer((req, res) => {
   res.setHeader('Content-Type', 'application/json');
-  if (req.url === '/api/auth/accounts') res.end(JSON.stringify({ data: [] }));
-  else if (req.url === '/api/auth/status') res.end(JSON.stringify({ data: { authenticated: false } }));
+  if (['/api/auth/accounts', '/api/workflow/tasks', '/api/command-presets'].includes(req.url)) {
+    res.end(JSON.stringify({ data: [] }));
+  } else if (req.url === '/api/auth/status') {
+    res.end(JSON.stringify({ data: { isAuthenticated: false } }));
+  }
   else res.end(JSON.stringify({ data: {} }));
 });
 await new Promise((resolve) => core.listen(0, '127.0.0.1', resolve));
@@ -31,7 +36,9 @@ try {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto(`${url}/accounts`);
-  await page.getByTestId('accounts-title').waitFor();
+  await page.getByTestId('accounts-title').waitFor({ timeout: 15000 }).catch(async () => {
+    throw new Error(`Accounts failed to load: ${errors.join('; ')}; body=${(await page.locator('body').innerText()).slice(0, 1000)}`);
+  });
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
     if (!navigator.serviceWorker.controller) {
