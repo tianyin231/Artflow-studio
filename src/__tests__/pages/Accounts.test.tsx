@@ -84,11 +84,43 @@ describe('Accounts page', () => {
   });
 
   it('lists accounts and allows switch', async () => {
+    listAccounts.mockResolvedValue({ data: { data: [{ userId: 'u1', name: 'User One', isDefault: false }] } });
     useAccount.mockResolvedValue({ data: { data: { ok: true } } });
     renderPage();
     expect(await screen.findByTestId('account-u1')).toHaveTextContent('User One');
     fireEvent.click(screen.getByTestId('btn-use-u1'));
     await waitFor(() => expect(useAccount).toHaveBeenCalledWith('u1'));
+  });
+
+  it('shows account load errors and allows retry', async () => {
+    listAccounts.mockRejectedValueOnce(new Error('Account service unavailable'));
+    renderPage();
+    expect(await screen.findByTestId('accounts-error')).toHaveTextContent('Account service unavailable');
+    fireEvent.click(screen.getByRole('button', { name: /重\s*试/ }));
+    expect(await screen.findByTestId('account-u1')).toBeInTheDocument();
+    expect(screen.queryByTestId('accounts-error')).not.toBeInTheDocument();
+  });
+
+  it('requires a started login and consumes its session after completion', async () => {
+    window.open = jest.fn();
+    loginComplete.mockResolvedValue({ data: { data: { ok: true } } });
+    renderPage();
+    expect(screen.getByTestId('btn-complete-login')).toBeDisabled();
+    fireEvent.click(screen.getByTestId('btn-open-auth'));
+    expect(await screen.findByTestId('authorize-link')).toHaveAttribute('href', expect.stringContaining('https://example.invalid'));
+    fireEvent.change(screen.getByTestId('input-callback'), { target: { value: '  pixiv://account/login?code=abc  ' } });
+    fireEvent.click(screen.getByTestId('btn-complete-login'));
+    await waitFor(() => expect(loginComplete).toHaveBeenCalledWith('lid-1', 'pixiv://account/login?code=abc'));
+    await waitFor(() => expect(screen.getByTestId('btn-complete-login')).toBeDisabled());
+    expect(screen.queryByTestId('authorize-link')).not.toBeInTheDocument();
+  });
+
+  it('rejects blank tokens without sending an import request', async () => {
+    renderPage();
+    fireEvent.change(screen.getByTestId('input-refresh-token'), { target: { value: '   ' } });
+    fireEvent.click(screen.getByTestId('btn-import-token'));
+    expect(await screen.findByText('请粘贴 token')).toBeInTheDocument();
+    expect(importToken).not.toHaveBeenCalled();
   });
 
   it('proxy test renders results', async () => {
