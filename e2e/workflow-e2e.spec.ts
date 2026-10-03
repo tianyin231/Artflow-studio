@@ -48,19 +48,19 @@ test.describe('Workflow', () => {
     const assetPath = `/api/workflow/tasks/${id}/assets/${encodeURIComponent(asset.name)}`;
     const [rejected] = await Promise.all([
       apiResponse(page, assetPath, 'PATCH'),
-      card.getByRole('button', { name: '剔除', exact: true }).click(),
+      card.getByRole('button', { name: /^剔\s*除$/ }).click(),
     ]);
     expect(rejected.status()).toBe(200);
     expect((await getTask(page.request, id)).assets.find((item: { name: string }) => item.name === asset.name).status).toBe('rejected');
-    await expect(card.getByRole('button', { name: '剔除', exact: true })).toBeDisabled();
+    await expect(card.getByRole('button', { name: /^剔\s*除$/ })).toBeDisabled();
 
     const [accepted] = await Promise.all([
       apiResponse(page, assetPath, 'PATCH'),
-      card.getByRole('button', { name: '通过', exact: true }).click(),
+      card.getByRole('button', { name: /^通\s*过$/ }).click(),
     ]);
     expect(accepted.status()).toBe(200);
     expect((await getTask(page.request, id)).assets.find((item: { name: string }) => item.name === asset.name).status).toBe('accepted');
-    await expect(card.getByRole('button', { name: '通过', exact: true })).toBeDisabled();
+    await expect(card.getByRole('button', { name: /^通\s*过$/ })).toBeDisabled();
   });
 
   test('platform dry-runs return dry_run without issuing publisher network requests', async ({ request }) => {
