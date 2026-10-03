@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   AutoComplete,
@@ -41,6 +41,21 @@ const defaultConfig: AiIntegrationSettings = {
   planningMode: 'rules-first',
 };
 
+const providerPresets: Array<{
+  id: string;
+  label: string;
+  provider: AiIntegrationSettings['provider'];
+  baseUrl: string;
+  model: string;
+}> = [
+  { id: 'openai', label: 'OpenAI', provider: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+  { id: 'deepseek', label: 'DeepSeek', provider: 'openai', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+  { id: 'dashscope', label: '通义千问', provider: 'openai', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
+  { id: 'mimo', label: 'Xiaomi MiMo', provider: 'openai', baseUrl: 'https://api.xiaomimimo.com/v1', model: 'mimo-v2.6-pro' },
+  { id: 'ollama', label: 'Ollama 本地', provider: 'ollama', baseUrl: 'http://127.0.0.1:11434', model: 'llama3' },
+  { id: 'mock', label: 'Mock (fixture)', provider: 'openai', baseUrl: 'http://127.0.0.1:3302/v1', model: 'mock' },
+];
+
 export default function AiIntegration() {
   const [form] = Form.useForm<AiIntegrationSettings>();
   const {
@@ -62,6 +77,7 @@ export default function AiIntegration() {
   const [configCommand, setConfigCommand] = useState('');
   const [configPatchResult, setConfigPatchResult] = useState<AiConfigPatchResult | null>(null);
   const [isApplyingConfig, setIsApplyingConfig] = useState(false);
+  const providerRevision = useRef(0);
   const config = settings ?? defaultConfig;
 
   useEffect(() => {
@@ -71,6 +87,7 @@ export default function AiIntegration() {
   const watchedProvider = Form.useWatch('provider', form) ?? config.provider;
   const watchedModel = Form.useWatch('model', form) ?? config.model;
   const watchedApiKey = Form.useWatch('apiKey', form) ?? config.apiKey;
+  const watchedBaseUrl = Form.useWatch('baseUrl', form) ?? config.baseUrl;
   const providerReady = watchedProvider === 'local-rules' || Boolean(watchedApiKey || watchedProvider === 'ollama');
   const isExternalProvider = watchedProvider !== 'local-rules';
   const providerOptions = useMemo(
@@ -89,6 +106,13 @@ export default function AiIntegration() {
     }
     return remoteModels;
   }, [models, watchedModel]);
+
+  const resetProviderResults = () => {
+    providerRevision.current += 1;
+    setModels([]);
+    setTestResult(null);
+    setBalanceResult(null);
+  };
 
   const handleSave = async (values: AiIntegrationSettings) => {
     try {
@@ -110,9 +134,11 @@ export default function AiIntegration() {
   };
 
   const handleFetchModels = async () => {
+    const revision = providerRevision.current;
     try {
       const values = await readFormSettings();
       const nextModels = await fetchModelsAsync(values);
+      if (revision !== providerRevision.current) return;
       setModels(nextModels);
       const firstModel = nextModels[0];
       if (firstModel && !nextModels.some((model) => model.id === values.model)) {
@@ -120,29 +146,36 @@ export default function AiIntegration() {
       }
       message.success(nextModels.length > 0 ? `已获取 ${nextModels.length} 个模型` : '没有获取到模型');
     } catch (error) {
+      if (revision !== providerRevision.current) return;
       message.error(error instanceof Error ? error.message : '获取模型失败');
     }
   };
 
   const handleTestConnection = async () => {
+    const revision = providerRevision.current;
     try {
       const values = await readFormSettings();
       const result = await testConnectionAsync(values);
+      if (revision !== providerRevision.current) return;
       setTestResult(result);
       message.success(result.message || '连接测试通过');
     } catch (error) {
+      if (revision !== providerRevision.current) return;
       setTestResult({ ok: false, message: error instanceof Error ? error.message : '连接测试失败' });
       message.error(error instanceof Error ? error.message : '连接测试失败');
     }
   };
 
   const handleQueryBalance = async () => {
+    const revision = providerRevision.current;
     try {
       const values = await readFormSettings();
       const result = await queryBalanceAsync(values);
+      if (revision !== providerRevision.current) return;
       setBalanceResult(result);
       message[result.supported ? 'success' : 'warning'](result.supported ? '余额信息已返回' : result.message || '该 Provider 不支持余额查询');
     } catch (error) {
+      if (revision !== providerRevision.current) return;
       setBalanceResult({ supported: false, message: error instanceof Error ? error.message : '余额查询失败' });
       message.error(error instanceof Error ? error.message : '余额查询失败');
     }
@@ -187,7 +220,7 @@ export default function AiIntegration() {
           </Col>
           <Col>
             <Tag color={providerReady ? 'success' : 'warning'} icon={providerReady ? <CheckCircleOutlined /> : <ApiOutlined />}>
-              {providerReady ? '配置可用' : '等待密钥'}
+              {providerReady ? '配置已填写' : '等待密钥'}
             </Tag>
           </Col>
         </Row>
@@ -207,8 +240,8 @@ export default function AiIntegration() {
               </Row>
               <Alert
                 showIcon
-                type={isExternalProvider ? 'success' : 'info'}
-                message={isExternalProvider ? 'Provider 已接入，可用于模型探测和连通性验证' : '当前使用本地规则规划器'}
+                type="info"
+                message={isExternalProvider ? 'Provider 参数已填写，请测速确认连接' : '当前使用本地规则规划器'}
                 description={
                   isExternalProvider
                     ? '当前工作流计划仍保留规则规划器兜底；AI 优先模式会作为后续 Planner 扩展入口。'
@@ -220,21 +253,66 @@ export default function AiIntegration() {
                 <Descriptions.Item label="模型数量">{models.length || '未获取'}</Descriptions.Item>
                 <Descriptions.Item label="密钥状态">{watchedApiKey ? '已填写' : '未填写'}</Descriptions.Item>
               </Descriptions>
+              <Card size="small" title="Token 用量" data-testid="token-usage-card">
+                <Text type="secondary">当前工作流接口未提供 Token 用量与费用统计。</Text>
+              </Card>
+              <Card size="small" title="供应商预设" data-testid="provider-presets-card">
+                <Space wrap>
+                  {providerPresets.map((preset) => (
+                    <Button
+                      key={preset.id}
+                      data-testid={`preset-${preset.id}`}
+                      size="small"
+                      disabled={isSaving}
+                      type={watchedProvider === preset.provider && watchedBaseUrl === preset.baseUrl ? 'primary' : 'default'}
+                      onClick={() => {
+                        resetProviderResults();
+                        form.setFieldsValue({
+                          provider: preset.provider,
+                          baseUrl: preset.baseUrl,
+                          model: preset.model,
+                          apiKey: '',
+                          planningMode: 'ai-first',
+                        });
+                      }}
+                    >
+                      {preset.label}
+                    </Button>
+                  ))}
+                </Space>
+              </Card>
+              <Card size="small" title="Prompt 版本" data-testid="prompt-version-card">
+                <Text type="secondary">当前工作流接口不支持选择 Prompt 版本。</Text>
+              </Card>
             </Space>
           </Card>
         </Col>
 
         <Col xs={24} xl={15}>
           <Card title="Provider 配置">
-            <Form layout="vertical" form={form} initialValues={config} onFinish={handleSave}>
+            <Form
+              layout="vertical"
+              form={form}
+              initialValues={config}
+              onFinish={handleSave}
+              onValuesChange={(changed: Partial<AiIntegrationSettings>) => {
+                if ('provider' in changed || 'baseUrl' in changed || 'apiKey' in changed) resetProviderResults();
+              }}
+            >
               <Row gutter={16}>
                 <Col xs={24} md={12}>
                   <Form.Item label="Provider" name="provider" rules={[{ required: true }]}>
                     <Select
                       options={providerOptions}
+                      disabled={isSaving}
                       onChange={(provider) => {
-                        setModels([]);
-                        form.setFieldValue('planningMode', provider === 'local-rules' ? 'rules-first' : 'ai-first');
+                        resetProviderResults();
+                        form.setFieldsValue({
+                          baseUrl: provider === 'openai' ? 'https://api.openai.com/v1' : provider === 'anthropic' ? 'https://api.anthropic.com' : provider === 'ollama' ? 'http://127.0.0.1:11434' : '',
+                          model: provider === 'local-rules' ? 'local-rule-planner' : '',
+                          apiKey: '',
+                          planningMode: provider === 'local-rules' ? 'rules-first' : 'ai-first',
+                        });
                       }}
                     />
                   </Form.Item>
@@ -286,7 +364,7 @@ export default function AiIntegration() {
 
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={10}>
-          <Card title="连接测速" style={{ height: '100%' }}>
+          <Card title="连接测速" style={{ height: '100%' }} data-testid="ai-connection-card">
             {testResult ? (
               <Space direction="vertical" size={10} style={{ width: '100%' }}>
                 <Tag color={testResult.ok ? 'success' : 'error'}>
