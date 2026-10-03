@@ -42,7 +42,9 @@
     "mobile:sync": "npm run build && npx cap sync",
     "check-translations": "node check-translations.cjs",
     "electron:build:linux:dir": "npm run build && electron-builder --linux --dir",
-    "test:electron": "node --test tests/electron-*.test.cjs"
+    "check:pwa": "node scripts/check-pwa.cjs",
+    "test:electron": "node --test tests/electron-*.test.cjs",
+    "test:pwa": "npm run build && npm run check:pwa && node e2e/pwa-smoke.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
@@ -93,7 +95,8 @@
     "typescript": "^5.2.2",
     "unplugin-auto-import": "^21.1.0",
     "vite": "^7.2.2",
-    "vite-plugin-imp": "^2.4.0"
+    "vite-plugin-imp": "^2.4.0",
+    "vite-plugin-pwa": "^1.3.0"
   },
   "overrides": {
     "glob": "^10.3.10"

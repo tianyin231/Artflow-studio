@@ -18,7 +18,7 @@ interface ProtectedRouteProps {
  */
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { t } = useTranslation();
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, fetchStatus } = useQuery({
     queryKey: QUERY_KEYS.AUTH_STATUS,
     queryFn: () => api.getAuthStatus(),
     retry: retryBackendStarting,
@@ -29,9 +29,11 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   });
 
   const authenticated = !isError && isAuthenticated(data);
+  const offline = typeof navigator !== 'undefined' && !navigator.onLine;
 
   // Show loading spinner while checking authentication (only on initial load)
-  if (isLoading && !data) {
+  // A first query pauses while offline. Keep the cached app shell and routes usable.
+  if (isLoading && !data && fetchStatus !== 'paused' && !offline) {
     return (
       <div
         style={{

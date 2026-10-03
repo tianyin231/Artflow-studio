@@ -2,6 +2,7 @@ import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import net from 'net';
+import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
 const DEV_API_PORT = process.env.VITE_DEV_API_PORT || 3300;
@@ -70,6 +71,34 @@ export default defineConfig({
   plugins: [
     react(),
     devApiReadyGate(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      includeAssets: ['artflow.svg', 'icons/*.png'],
+      manifest: {
+        name: 'Artflow',
+        short_name: 'Artflow',
+        description: 'Pixiv to video to multi-platform publish',
+        theme_color: '#111827',
+        background_color: '#111827',
+        display: 'standalone',
+        id: '/',
+        scope: '/',
+        start_url: '/',
+        icons: [
+          { src: '/icons/artflow-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icons/artflow-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/(?:api|socket\.io)(?:\/|\?|$)/],
+        // vendor antd.esm.js is ~3.7MB; allow it in precache or skip
+        maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
+      },
+      devOptions: { enabled: false },
+    }),
   ],
   define: {
     'globalThis.__VITE_ENV__': JSON.stringify({
