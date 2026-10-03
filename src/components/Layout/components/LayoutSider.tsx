@@ -57,6 +57,16 @@ export default function LayoutSider() {
       label: t('layout.publishSettings'),
     },
     {
+      key: '/publish-platforms',
+      icon: <CloudUploadOutlined />,
+      label: '发布平台',
+    },
+    {
+      key: '/accounts',
+      icon: <ApiOutlined />,
+      label: '账号与连接',
+    },
+    {
       key: '/presets',
       icon: <SaveOutlined />,
       label: t('layout.commandPresets'),
