@@ -41,7 +41,7 @@ React 18 · TypeScript · Ant Design 5 · React Router 6 · React Query · Axios
 
 ### 前置要求
 
-- Node.js 22.12+（推荐 22/24 LTS）和 npm；Vite 7 也支持 Node 20.19+（20.x），不支持 Node 18
+- 与 Core 配套时使用 Node.js 22.14+（22.x）或 23.6+（推荐 22/24 LTS）和 npm；Studio 独立运行 Vite 7 时可使用 Node 20.19+ 或 22.12+
 - 运行中的 Artflow-core（见其 README；或使用下方的一键 fixture 全栈）
 
 ### 开发
