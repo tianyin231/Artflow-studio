@@ -5,13 +5,13 @@ async function createDryRunViaUi(page: Page) {
   await page.goto('/dashboard');
   await expect(page.locator('.paf-page').getByRole('heading', { name: 'Pixiv Auto Flow' })).toBeVisible();
   await page.getByPlaceholder('可输入：本周鸣潮 收藏数500+ 卡点视频。也可以留空，只用表单启动。').fill('fixture Artflow E2E');
-  await page.getByLabel('目标标签', { exact: true }).fill('fixture');
-  await page.getByLabel('抓取数量', { exact: true }).fill('3');
+  await page.getByLabel('目标标签').fill('fixture');
+  await page.getByLabel('抓取数量').fill('3');
   await page.getByLabel('收藏阈值', { exact: true }).fill('0');
   await page.getByRole('checkbox', { name: '只使用本地素材' }).check();
   const [response] = await Promise.all([
     apiResponse(page, '/api/workflow/tasks'),
-    page.getByRole('button', { name: '按当前参数启动', exact: true }).click(),
+    page.getByRole('button', { name: /按当前参数启动$/ }).click(),
   ]);
   expect(response.status()).toBe(200);
   expect(response.request().postDataJSON()).toMatchObject({

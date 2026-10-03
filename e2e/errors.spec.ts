@@ -32,7 +32,7 @@ test.describe('Errors and API contracts', () => {
     }));
     await page.goto('/dashboard');
     await expect(page.getByRole('link', { name: /立即登录|Login Now/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: '按当前参数启动', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: /按当前参数启动$/ })).toBeVisible();
   });
 
   test('local publish dry-run returns the documented status', async ({ request }) => {

@@ -6,8 +6,7 @@ test.describe('Accounts', () => {
     await page.goto('/accounts');
     await expect(page.getByTestId('accounts-page')).toBeVisible();
 
-    const [popup, response] = await Promise.all([
-      context.waitForEvent('page'),
+    const [response] = await Promise.all([
       apiResponse(page, '/api/auth/login/start'),
       page.getByTestId('btn-open-auth').click(),
     ]);
@@ -19,6 +18,12 @@ test.describe('Accounts', () => {
     expect(authorize.searchParams.has('code_verifier')).toBe(false);
     expect(JSON.stringify(start)).not.toContain('codeVerifier');
     await expect(page.getByTestId('authorize-url')).toBeVisible();
+    // Opening after an async API call may be blocked; the explicit link is
+    // the supported browser fallback and must always open the authorization.
+    const [popup] = await Promise.all([
+      context.waitForEvent('page'),
+      page.getByTestId('authorize-link').click(),
+    ]);
     if (!popup.isClosed()) await popup.close();
 
     // Obtain the mock's real redirect; browsers cannot navigate a pixiv:// URL.
