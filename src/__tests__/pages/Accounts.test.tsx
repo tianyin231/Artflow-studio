@@ -2,7 +2,7 @@
  * Accounts page RTL tests (F1).
  */
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import Accounts from '../../pages/Accounts';
@@ -33,6 +33,7 @@ describe('Accounts page', () => {
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
     jest.clearAllMocks();
+    delete window.artflow;
     listAccounts.mockResolvedValue({
       data: { data: [{ userId: 'u1', name: 'User One', isDefault: true }] },
     });
@@ -45,6 +46,10 @@ describe('Accounts page', () => {
         },
       },
     });
+  });
+
+  afterEach(() => {
+    delete window.artflow;
   });
 
   const renderPage = () =>
@@ -69,6 +74,44 @@ describe('Accounts page', () => {
     await waitFor(() => expect(loginStart).toHaveBeenCalled());
     expect(window.open).toHaveBeenCalled();
     expect(await screen.findByTestId('authorize-url')).toBeInTheDocument();
+  });
+
+  it('uses the desktop bridge and completes captured OAuth even before the start response renders', async () => {
+    let callback: ((payload: { loginId: string; callback: string }) => void) | undefined;
+    const cleanup = jest.fn();
+    const invoke = jest.fn().mockImplementation(async (channel: string) => {
+      if (channel === 'auth.startLogin') {
+        callback?.({ loginId: 'desktop-id', callback: 'pixiv://account/login?code=desktop' });
+        return { data: { loginId: 'desktop-id', authorizeUrl: 'https://app-api.pixiv.net/web/v1/login' } };
+      }
+      return { data: { ok: true } };
+    });
+    window.artflow = { invoke, onOauthCallback: (listener) => { callback = listener; return cleanup; } };
+    window.open = jest.fn();
+    const page = renderPage();
+    fireEvent.click(await screen.findByTestId('btn-open-auth'));
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('auth.completeLogin', {
+      loginId: 'desktop-id', callback: 'pixiv://account/login?code=desktop',
+    }));
+    await act(async () => {});
+    expect(screen.getByTestId('btn-complete-login')).toBeDisabled();
+    expect(screen.queryByTestId('authorize-link')).not.toBeInTheDocument();
+    expect(loginStart).not.toHaveBeenCalled();
+    expect(loginComplete).not.toHaveBeenCalled();
+    expect(window.open).not.toHaveBeenCalled();
+    page.unmount();
+    expect(cleanup).toHaveBeenCalled();
+  });
+
+  it('imports desktop tokens through the bridge', async () => {
+    const invoke = jest.fn().mockResolvedValue({ data: { ok: true } });
+    window.artflow = { invoke, onOauthCallback: () => () => {} };
+    renderPage();
+    fireEvent.change(await screen.findByTestId('input-refresh-token'), { target: { value: ' desktop-token ' } });
+    fireEvent.click(screen.getByTestId('btn-import-token'));
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith('auth.importToken', { refreshToken: 'desktop-token' }));
+    expect(importToken).not.toHaveBeenCalled();
+    expect(await screen.findByTestId('token-preview')).toHaveTextContent(/\*\*\*\*/);
   });
 
   it('imports refresh token and shows masked preview', async () => {

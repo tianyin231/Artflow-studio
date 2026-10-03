@@ -1,0 +1,19 @@
+# Draft desktop build workflow (manual trigger). To enable, copy to .github/workflows/desktop.yml.
+name: desktop
+on:
+  workflow_dispatch:
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build
+      - run: npx electron-builder --linux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-unpacked
+          path: dist_electron/

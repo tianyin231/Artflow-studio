@@ -2,7 +2,7 @@
  * Accounts & Connections — Pixiv host login, token import, accounts, proxy test.
  * Replaces password automation. Tokens are never displayed in full.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Button,
@@ -49,6 +49,7 @@ export default function Accounts() {
   const [step, setStep] = useState(0);
   const [authorizeUrl, setAuthorizeUrl] = useState('');
   const [loginId, setLoginId] = useState('');
+  const capturedDesktopSession = useRef('');
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountsError, setAccountsError] = useState('');
   const [accountsLoading, setAccountsLoading] = useState(false);
@@ -73,32 +74,40 @@ export default function Accounts() {
     }
   }, []);
 
-  const refreshSession = async () => {
+  const refreshSession = useCallback(async () => {
     await Promise.all([
       refreshAccounts(),
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.AUTH_STATUS }),
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CONFIG }),
     ]);
-  };
+  }, [queryClient, refreshAccounts]);
 
   useEffect(() => {
     void refreshAccounts();
   }, [refreshAccounts]);
 
   const handleStartLogin = async () => {
+    capturedDesktopSession.current = '';
     setLoading(true);
     try {
-      const res = await api.loginStart();
-      const data = res.data?.data;
+      const data = window.artflow
+        ? (await window.artflow.invoke('auth.startLogin')).data
+        : (await api.loginStart()).data?.data;
       if (data?.authorizeUrl && data.loginId) {
+        // A fast redirect can arrive before the IPC start response.
+        if (capturedDesktopSession.current === data.loginId) return;
         setAuthorizeUrl(data.authorizeUrl);
         setLoginId(data.loginId);
         setStep(1);
-        const opened = window.open(data.authorizeUrl, '_blank', 'noopener,noreferrer');
-        if (!opened) {
-          message.info('授权链接已生成，请点击下方链接打开登录页面');
+        if (window.artflow) {
+          message.success('已打开授权窗口，完成登录后会自动接收回调');
         } else {
-          message.success('已打开授权链接，请在浏览器完成登录后粘贴回调 URL');
+          const opened = window.open(data.authorizeUrl, '_blank', 'noopener,noreferrer');
+          if (!opened) {
+            message.info('授权链接已生成，请点击下方链接打开登录页面');
+          } else {
+            message.success('已打开授权链接，请在浏览器完成登录后粘贴回调 URL');
+          }
         }
       } else {
         message.error('未能获取授权链接');
@@ -106,15 +115,18 @@ export default function Accounts() {
     } catch (error) {
       message.error(errorMessage(error, '登录启动失败'));
     } finally {
-      setLoading(false);
+      if (!capturedDesktopSession.current) setLoading(false);
     }
   };
 
-  const handleComplete = async (values: { callback: string }) => {
-    if (!loginId) return;
+  const completeLogin = useCallback(async (sessionId: string, callback: string) => {
     setLoading(true);
     try {
-      await api.loginComplete(loginId, values.callback.trim());
+      if (window.artflow) {
+        await window.artflow.invoke('auth.completeLogin', { loginId: sessionId, callback: callback.trim() });
+      } else {
+        await api.loginComplete(sessionId, callback.trim());
+      }
       setStep(2);
       setLoginId('');
       setAuthorizeUrl('');
@@ -129,12 +141,25 @@ export default function Accounts() {
     } finally {
       setLoading(false);
     }
+  }, [callbackForm, refreshSession]);
+
+  useEffect(() => window.artflow?.onOauthCallback(({ loginId: sessionId, callback }) => {
+    capturedDesktopSession.current = sessionId;
+    void completeLogin(sessionId, callback);
+  }), [completeLogin]);
+
+  const handleComplete = async (values: { callback: string }) => {
+    if (loginId) await completeLogin(loginId, values.callback);
   };
 
   const handleImportToken = async (values: { refreshToken: string }) => {
     setLoading(true);
     try {
-      await api.importToken(values.refreshToken.trim());
+      if (window.artflow) {
+        await window.artflow.invoke('auth.importToken', { refreshToken: values.refreshToken.trim() });
+      } else {
+        await api.importToken(values.refreshToken.trim());
+      }
       setImportedPreview(maskToken(values.refreshToken.trim()));
       message.success('token 已导入');
       form.resetFields(['refreshToken']);

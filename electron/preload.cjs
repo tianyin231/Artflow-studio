@@ -1,64 +1,18 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-// 暴露安全的 API 给渲染进程
-contextBridge.exposeInMainWorld('electron', {
-  // 获取平台信息
-  platform: process.platform,
-  
-  // 获取版本信息
-  versions: {
-    node: process.versions.node,
-    chrome: process.versions.chrome,
-    electron: process.versions.electron,
-  },
+const ALLOW = ['auth.startLogin', 'auth.completeLogin', 'auth.importToken', 'app.getVersion'];
 
-  // 窗口控制（如果需要）
-  minimize: () => ipcRenderer.invoke('window-minimize'),
-  maximize: () => ipcRenderer.invoke('window-maximize'),
-  close: () => ipcRenderer.invoke('window-close'),
-
-  // 后端就绪事件
-  onBackendReady: (callback) => {
-    ipcRenderer.on('backend-ready', callback);
+contextBridge.exposeInMainWorld('artflow', {
+  invoke: (channel, ...args) => {
+    if (!ALLOW.includes(channel)) {
+      return Promise.reject(new Error('channel not allowed: ' + channel));
+    }
+    return ipcRenderer.invoke(channel, ...args);
   },
-  
-  // 后端错误事件
-  onBackendError: (callback) => {
-    ipcRenderer.on('backend-error', (event, error) => callback(error));
-  },
-
-  // 登录相关
-  openLoginWindow: (options = {}) => ipcRenderer.invoke('open-login-window', options),
-  closeLoginWindow: () => ipcRenderer.invoke('close-login-window'),
-  onLoginSuccess: (callback) => {
-    const handler = (event, data) => callback(data);
-    ipcRenderer.on('login-success', handler);
-    // Return cleanup function
-    return () => {
-      ipcRenderer.removeListener('login-success', handler);
-    };
-  },
-  onLoginError: (callback) => {
-    const handler = (event, error) => callback(error);
-    ipcRenderer.on('login-error', handler);
-    // Return cleanup function
-    return () => {
-      ipcRenderer.removeListener('login-error', handler);
-    };
-  },
-
-  // 文件系统操作（如果需要）
-  // openFile: () => ipcRenderer.invoke('dialog:openFile'),
-  // saveFile: () => ipcRenderer.invoke('dialog:saveFile'),
-});
-
-// 向后兼容
-contextBridge.exposeInMainWorld('electronAPI', {
-  platform: process.platform,
-  versions: {
-    node: process.versions.node,
-    chrome: process.versions.chrome,
-    electron: process.versions.electron,
+  onOauthCallback: (cb) => {
+    if (typeof cb !== 'function') throw new TypeError('callback required');
+    const listener = (_event, payload) => cb(payload);
+    ipcRenderer.on('oauth-callback', listener);
+    return () => ipcRenderer.removeListener('oauth-callback', listener);
   },
 });
-

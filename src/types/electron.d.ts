@@ -60,12 +60,28 @@ export interface ElectronLoginError {
   [key: string]: unknown;
 }
 
+export interface DesktopOauthCallback {
+  loginId: string;
+  callback: string;
+}
+
+export interface ArtflowDesktopAPI {
+  invoke(channel: 'auth.startLogin'): Promise<{
+    data: { loginId: string; authorizeUrl: string; expiresAt: string };
+  }>;
+  invoke(channel: 'auth.completeLogin', payload: DesktopOauthCallback): Promise<{ data: { ok: boolean } }>;
+  invoke(channel: 'auth.importToken', payload: { refreshToken: string }): Promise<{ data: { ok: boolean } }>;
+  invoke(channel: 'app.getVersion'): Promise<string>;
+  onOauthCallback(callback: (payload: DesktopOauthCallback) => void): () => void;
+}
+
 /**
  * Extended Window interface with Electron API
  */
 declare global {
   interface Window {
     electron?: ElectronAPI;
+    artflow?: ArtflowDesktopAPI;
   }
 
   interface NodeJS {
