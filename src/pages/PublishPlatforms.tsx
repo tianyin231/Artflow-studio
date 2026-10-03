@@ -1,7 +1,7 @@
 /**
  * Publish Platforms — list registered publishers, dry-run, auth status.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Badge,
@@ -15,19 +15,9 @@ import {
 } from 'antd';
 import { CloudUploadOutlined, ExperimentOutlined, FileTextOutlined } from '@ant-design/icons';
 import { api } from '../services/api';
+import { PublisherDryRunResult, PublisherInfo } from '../services/api/publishers';
 
 const { Title, Paragraph, Text } = Typography;
-
-export interface PublisherInfo {
-  id: string;
-  displayName: string;
-  enabled: boolean;
-  experimental?: boolean;
-  manualOnly?: boolean;
-  auth: string;
-  notes?: string;
-  state?: string;
-}
 
 const PLATFORM_NOTES: Record<string, string> = {
   'local-export': '完全可行，是手动发布平台的兜底。生成本地发布包目录。',
@@ -45,27 +35,19 @@ export default function PublishPlatforms() {
   const [rows, setRows] = useState<PublisherInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState('');
+  const [error, setError] = useState('');
+  const [dryRunResult, setDryRunResult] = useState<(PublisherDryRunResult & { publisherId: string }) | null>(null);
 
   const load = async () => {
     setLoading(true);
     try {
-      const res = await api.listPublishers?.();
-      const list = (res?.data?.data ?? []) as PublisherInfo[];
-      setRows(list);
-    } catch {
-      // fallback catalog when API not yet mounted
-      setRows(
-        Object.entries(PLATFORM_NOTES).map(([id, notes]) => ({
-          id,
-          displayName: id,
-          enabled: id === 'local-export' || id === 'wallpaper-engine-package',
-          experimental: id === 'steam-workshop' || id === 'douyin',
-          manualOnly: id === 'xiaohongshu',
-          auth: 'none',
-          notes,
-          state: 'not_configured',
-        }))
-      );
+      const res = await api.listPublishers();
+      if (!Array.isArray(res.data?.data)) throw new Error('发布平台响应无效');
+      setRows(res.data.data.map((row) => ({ ...row, notes: row.notes || PLATFORM_NOTES[row.id] })));
+      setError('');
+    } catch (error) {
+      setRows([]);
+      setError(error instanceof Error ? error.message : '加载发布平台失败');
     } finally {
       setLoading(false);
     }
@@ -75,18 +57,29 @@ export default function PublishPlatforms() {
     void load();
   }, []);
 
-  const handleDryRun = async (id: string) => {
+  const handleDryRun = useCallback(async (id: string) => {
     setBusyId(id);
+    setDryRunResult(null);
     try {
-      const res = await api.dryRunPublish?.(id);
-      const status = res?.data?.data?.status ?? 'dry_run';
-      message.success(`${id} dry-run: ${status}`);
-    } catch {
-      message.warning(`${id} dry-run 请求失败（可能未配置）`);
+      const res = await api.dryRunPublish(id);
+      const result = res.data?.data;
+      if (!result?.status) throw new Error('dry-run 响应无效');
+      setDryRunResult({ ...result, publisherId: id });
+      if (result.status === 'dry_run') {
+        message.success(`${id} dry-run: ${result.message || result.status}`);
+      } else if (result.status === 'failed') {
+        message.error(`${id} dry-run: ${result.message || result.status}`);
+      } else {
+        message.warning(`${id} dry-run: ${result.message || result.status}`);
+      }
+    } catch (error) {
+      const details = error instanceof Error ? error.message : 'dry-run 请求失败';
+      setDryRunResult({ publisherId: id, status: 'failed', message: details });
+      message.error(details);
     } finally {
       setBusyId('');
     }
-  };
+  }, []);
 
   const columns = useMemo(
     () => [
@@ -109,8 +102,9 @@ export default function PublishPlatforms() {
         key: 'state',
         render: (state: string, row: PublisherInfo) => (
           <Space>
-            <Badge status={row.enabled ? 'success' : 'default'} />
-            <Text>{state || (row.enabled ? 'ok' : 'not_configured')}</Text>
+            <Badge status={state === 'ok' ? 'success' : state === 'error' ? 'error' : state === 'expired' ? 'warning' : 'default'} />
+            <Text>{state || '未获取状态'}</Text>
+            <Tag>{row.enabled ? '已启用' : '未启用'}</Tag>
           </Space>
         ),
       },
@@ -127,6 +121,7 @@ export default function PublishPlatforms() {
           <Button
             size="small"
             loading={busyId === row.id}
+            disabled={loading || Boolean(busyId)}
             onClick={() => handleDryRun(row.id)}
             data-testid={`btn-dryrun-${row.id}`}
           >
@@ -135,7 +130,7 @@ export default function PublishPlatforms() {
         ),
       },
     ],
-    [busyId]
+    [busyId, loading, handleDryRun]
   );
 
   return (
@@ -155,6 +150,19 @@ export default function PublishPlatforms() {
         description="小红书无公开 API 仅导出；抖音需企业资质；Steam Workshop 为实验性，优先用 WE 编辑器导入 local 包。"
         style={{ marginBottom: 16 }}
       />
+      {error && (
+        <Alert type="error" showIcon message={error} data-testid="publishers-error" style={{ marginBottom: 16 }} />
+      )}
+      {dryRunResult && (
+        <Alert
+          type={dryRunResult.status === 'dry_run' ? 'success' : dryRunResult.status === 'failed' ? 'error' : 'warning'}
+          showIcon
+          message={`${dryRunResult.publisherId} dry-run: ${dryRunResult.status}`}
+          description={dryRunResult.message}
+          data-testid="dry-run-result"
+          style={{ marginBottom: 16 }}
+        />
+      )}
       <Card>
         <Table
           rowKey="id"
