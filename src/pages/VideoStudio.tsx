@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Badge,
@@ -45,7 +45,7 @@ import {
 } from '../hooks/useWorkflow';
 import { useCommandPresets } from '../hooks/useCommandPresets';
 import { useWorkflowSelectionStore } from '../stores';
-import { WorkflowImageAsset, WorkflowPrefilterMode, WorkflowTask, WorkflowVideoMotion, WorkflowVideoOverrides } from '../services/api/types';
+import { WorkflowImageAsset, WorkflowPrefilterMode, WorkflowRenderOptions, WorkflowTask, WorkflowVideoMotion, WorkflowVideoOverrides } from '../services/api/types';
 
 const { Text, Title, Paragraph } = Typography;
 
@@ -238,10 +238,36 @@ export default function VideoStudio() {
     message.warning(task.status === 'review_required' ? '已驳回并重新生成视频' : '已驳回，可继续调整后重做');
   };
 
+  const [renderTransition, setRenderTransition] = useState<WorkflowRenderOptions['transition']>('crossfade');
+  const [coverTemplate, setCoverTemplate] = useState<WorkflowRenderOptions['coverTemplate']>('grid');
+  const [subtitles, setSubtitles] = useState<'none' | 'srt' | 'ass'>('none');
+
+  // Restore this task's settings once. Polling updates must keep edits made in the form.
+  const [renderOptionsTaskId, setRenderOptionsTaskId] = useState<string>();
+  useEffect(() => {
+    if (!task?.plan || renderOptionsTaskId === task.id) return;
+    setRenderTransition(task.plan.video.transition ?? 'crossfade');
+    setCoverTemplate(task.plan.video.coverTemplate ?? 'grid');
+    setSubtitles(task.plan.video.subtitles ?? 'none');
+    setRenderOptionsTaskId(task.id);
+  }, [task?.id, task?.plan, renderOptionsTaskId]);
+
+  const canRerender = Boolean(task?.plan && acceptedAssets.length &&
+    !['running', 'approved', 'asset_review_required', 'cover_review_required'].includes(task.status));
+
   const handleRerenderVideo = async () => {
     if (!task) return;
-    await rerenderVideo.mutateAsync({ taskId: task.id, note: '视频生成页手动重新生成视频' });
-    message.success('已开始重新生成视频');
+    if (!canRerender) return;
+    try {
+      await rerenderVideo.mutateAsync({
+        taskId: task.id,
+        note: '视频生成页手动重新生成视频',
+        options: { transition: renderTransition, coverTemplate, subtitles },
+      });
+      message.success('已开始重新生成视频');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '重新生成视频失败，请重试');
+    }
   };
 
   const handleAssetStatus = async (asset: WorkflowImageAsset, status: 'accepted' | 'rejected') => {
@@ -752,6 +778,11 @@ export default function VideoStudio() {
                                 {task.videoPath}
                               </Paragraph>
                             )}
+                            {task.subtitlePath && (
+                              <a href={`/api/workflow/tasks/${encodeURIComponent(task.id)}/subtitles`} download>
+                                下载字幕文件（{task.plan?.video.subtitles?.toUpperCase()}）
+                              </a>
+                            )}
                             <Space wrap>
                               {task.status === 'failed' && (
                                 <Button
@@ -776,7 +807,57 @@ export default function VideoStudio() {
                               <Button danger disabled={task.status !== 'review_required'} loading={rejectTask.isPending} onClick={handleReject}>
                                 驳回并重做
                               </Button>
-                              <Button disabled={!task.videoPath} loading={rerenderVideo.isPending} onClick={handleRerenderVideo}>
+                              <Select
+                                data-testid="select-transition"
+                                size="small"
+                                style={{ width: 140 }}
+                                aria-label="视频转场"
+                                disabled={!canRerender || rerenderVideo.isPending}
+                                value={renderTransition}
+                                onChange={setRenderTransition}
+                                options={[
+                                  { value: 'crossfade', label: '转场: 交叉淡化' },
+                                  { value: 'kenburns-zoom-in', label: '转场: Ken Burns' },
+                                  { value: 'flash-white', label: '转场: 闪白' },
+                                  { value: 'push-left', label: '转场: 左推' },
+                                  { value: 'blur-in', label: '转场: 模糊' },
+                                ]}
+                              />
+                              <Select
+                                data-testid="select-cover-template"
+                                size="small"
+                                style={{ width: 140 }}
+                                aria-label="视频封面模板"
+                                disabled={!canRerender || rerenderVideo.isPending}
+                                value={coverTemplate}
+                                onChange={setCoverTemplate}
+                                options={[
+                                  { value: 'grid', label: '封面: 网格' },
+                                  { value: 'single', label: '封面: 单图' },
+                                  { value: 'collage', label: '封面: 拼贴' },
+                                  { value: 'youtube-720p', label: '封面: YouTube' },
+                                ]}
+                              />
+                              <Select
+                                data-testid="select-subtitles"
+                                size="small"
+                                style={{ width: 120 }}
+                                aria-label="字幕文件格式"
+                                disabled={!canRerender || rerenderVideo.isPending}
+                                value={subtitles}
+                                onChange={(v) => setSubtitles(v as 'none' | 'srt' | 'ass')}
+                                options={[
+                                  { value: 'none', label: '字幕: 无' },
+                                  { value: 'srt', label: '字幕文件: SRT' },
+                                  { value: 'ass', label: '字幕文件: ASS' },
+                                ]}
+                              />
+                              <Button
+                                data-testid="btn-rerender-video"
+                                disabled={!canRerender}
+                                loading={rerenderVideo.isPending}
+                                onClick={handleRerenderVideo}
+                              >
                                 重新生成视频
                               </Button>
                               <Button icon={<CopyOutlined />} disabled={!task.videoPath} onClick={handleCopyPath}>

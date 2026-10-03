@@ -10,6 +10,7 @@ import {
   WorkflowSchedulePayload,
   WorkflowTask,
   WorkflowVideoOverrides,
+  WorkflowRenderOptions,
 } from '../services/api/types';
 import { backendStartingRetryDelay, retryBackendStarting } from '../utils/queryRetry';
 
@@ -161,8 +162,15 @@ export function useResumeWorkflowTask() {
 export function useRerenderWorkflowVideo() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ taskId, note }: { taskId: string; note?: string }) =>
-      (await workflowApi.rerenderVideo(taskId, note)).data.data,
+    mutationFn: async ({
+      taskId,
+      note,
+      options,
+    }: {
+      taskId: string;
+      note?: string;
+      options?: WorkflowRenderOptions;
+    }) => (await workflowApi.rerenderVideo(taskId, note, options)).data.data,
     onSuccess: (task) => {
       queryClient.invalidateQueries({ queryKey: WORKFLOW_TASKS_KEY });
       queryClient.setQueryData(workflowTaskKey(task.id), task);

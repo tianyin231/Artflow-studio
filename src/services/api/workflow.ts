@@ -22,6 +22,7 @@ import {
   WorkflowPublishOverrides,
   WorkflowPrefilterMode,
   WorkflowVideoOverrides,
+  WorkflowRenderOptions,
 } from './types';
 
 export const workflowApi = {
@@ -59,8 +60,12 @@ export const workflowApi = {
   resumeFailedTask: (taskId: string): Promise<AxiosResponse<ApiResponse<WorkflowTask>>> =>
     apiClient.post(`/workflow/tasks/${taskId}/resume`),
 
-  rerenderVideo: (taskId: string, note?: string): Promise<AxiosResponse<ApiResponse<WorkflowTask>>> =>
-    apiClient.post(`/workflow/tasks/${taskId}/rerender-video`, { note }),
+  rerenderVideo: (
+    taskId: string,
+    note?: string,
+    options?: WorkflowRenderOptions
+  ): Promise<AxiosResponse<ApiResponse<WorkflowTask>>> =>
+    apiClient.post(`/workflow/tasks/${taskId}/rerender-video`, { note, options }),
 
   regenerateCover: (
     taskId: string,

@@ -65,7 +65,7 @@ export interface WorkflowPlan {
     tagWhitelist?: string[];
     tagBlacklist?: string[];
   };
-  video: {
+  video: WorkflowRenderOptions & {
     style: string;
     motion: WorkflowVideoMotion;
     width: number;
@@ -129,6 +129,12 @@ export interface WorkflowVideoEffectShot {
 export interface WorkflowVideoEffectPlan {
   styleHint?: string;
   shots: WorkflowVideoEffectShot[];
+}
+
+export interface WorkflowRenderOptions {
+  transition?: 'kenburns-zoom-in' | 'kenburns-pan-left' | 'crossfade' | 'push-left' | 'wipe-right' | 'flash-white' | 'blur-in' | 'zoom-out';
+  coverTemplate?: 'grid' | 'single' | 'collage' | 'poster-3x4' | 'bilibili-16x10' | 'youtube-720p';
+  subtitles?: 'none' | 'srt' | 'ass';
 }
 
 export interface WorkflowVideoOverrides {
@@ -295,6 +301,7 @@ export interface WorkflowTask {
   progressEvents?: WorkflowProgressEvent[];
   coverPath?: string;
   videoPath?: string;
+  subtitlePath?: string;
   review?: {
     status: 'pending' | 'approved' | 'rejected';
     note?: string;
