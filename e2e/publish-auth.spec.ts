@@ -1,46 +1,32 @@
 import { test, expect } from '@playwright/test';
+import { apiResponse, publishPackage } from './helpers';
 
-test.describe('publish-auth', () => {
-  test('bilibili dry-run requires auth mapping', async ({ request }) => {
-    const res = await request.post('http://127.0.0.1:3300/api/publishers/bilibili/dry-run', {
-      data: {
-        taskId: 'auth-e2e',
-        videoPath: '',
-        coverPath: '',
-        title: 'title',
-        description: 'desc',
-        tags: ['Anime'],
-        aspectRatio: '16:9',
-        durationSec: 10,
-        sizeBytes: 1000,
-        sources: [],
-      },
-    });
-    expect(res.status()).toBe(200);
-    const body = await res.json();
-    // dry-run short-circuits before auth in our impl; if auth required it maps explicitly
-    expect(['dry_run', 'auth_required', 'failed']).toContain(body.data.status);
+test.describe('Publisher authentication and dry-run', () => {
+  test('Bilibili dry-run validates the package without requiring a live account', async ({ request }) => {
+    const response = await request.post('/api/publishers/bilibili/dry-run', { data: publishPackage });
+    expect(response.status()).toBe(200);
+    expect((await response.json()).data.status).toBe('dry_run');
   });
 
-  test('publisher list shows auth state for each platform', async ({ request }) => {
-    const res = await request.get('http://127.0.0.1:3300/api/publishers');
-    expect(res.status()).toBe(200);
-    const body = await res.json();
-    const ids = body.data.map((p: { id: string }) => p.id);
-    expect(ids).toContain('bilibili');
-    expect(ids).toContain('youtube');
-    expect(ids).toContain('local-export');
-    for (const p of body.data) {
-      expect(p.state).toBeTruthy();
-    }
+  test('publisher list exposes a documented auth state for every platform', async ({ request }) => {
+    const response = await request.get('/api/publishers');
+    expect(response.status()).toBe(200);
+    const { data } = await response.json();
+    expect(data.map((publisher: { id: string }) => publisher.id)).toEqual(expect.arrayContaining(['bilibili', 'youtube', 'local-export']));
+    for (const publisher of data) expect(['not_configured', 'ok', 'expired', 'error']).toContain(publisher.state);
+    expect(data.find((publisher: { id: string }) => publisher.id === 'local-export').state).toBe('ok');
   });
 
-  test('UI publish platforms page lists bilibili and youtube', async ({ page }) => {
-    await page.goto('/publish-platforms', { waitUntil: 'domcontentloaded' });
-    await page.waitForSelector('[data-testid="publish-platforms-page"]');
+  test('publisher page runs a local dry-run through the UI', async ({ page }) => {
+    await page.goto('/publish-platforms');
     await expect(page.getByTestId('platform-bilibili')).toBeVisible();
     await expect(page.getByTestId('platform-youtube')).toBeVisible();
-    await expect(page.getByTestId('btn-dryrun-local-export')).toBeVisible();
-    await page.screenshot({ path: 'test-results/screens/F2-M1-publish-auth.png' });
+    const [response] = await Promise.all([
+      apiResponse(page, '/api/publishers/local-export/dry-run'),
+      page.getByTestId('btn-dryrun-local-export').click(),
+    ]);
+    expect(response.status()).toBe(200);
+    expect((await response.json()).data.status).toBe('dry_run');
+    await expect(page.getByTestId('dry-run-result')).toContainText('local-export dry-run: dry_run');
   });
 });

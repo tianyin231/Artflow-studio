@@ -1,41 +1,12 @@
 import { test, expect } from '@playwright/test';
 
-/**
- * File Management E2E Tests
- * 
- * Tests the file browsing and management functionality.
- */
-test.describe('File Management', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to files page
-    await page.goto('/files');
-    await page.waitForLoadState('networkidle');
-  });
-
-  test('should display files page', async ({ page }) => {
-    // Check if files page is visible
-    const filesPage = page.locator('body');
-    await expect(filesPage).toBeVisible();
-  });
-
-  test('should load file list', async ({ page }) => {
-    // Wait for files to load
-    await page.waitForTimeout(2000);
-    
-    // Check for file list or table
-    const _fileList = page.locator('[data-testid="file-list"], table, .file-list, [class*="file"]').first();
-    // Files may not always be present, so we just check page loaded
-    await expect(page.locator('body')).toBeVisible();
-  });
-
-  test('should allow file navigation', async ({ page }) => {
-    // Wait for files to load
-    await page.waitForTimeout(2000);
-    
-    // Check if navigation elements exist
-    const _navElements = page.locator('a, button, [role="link"]').first();
-    // Just verify page is interactive
-    await expect(page.locator('body')).toBeVisible();
-  });
+test('file browser loads its table and filters by filename', async ({ page }) => {
+  await page.goto('/files');
+  await expect(page.getByRole('heading', { name: /文件浏览|File Browser/ })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: /名称|Name/ }).first()).toBeVisible();
+  const search = page.getByPlaceholder(/搜索文件名|Search files/);
+  await expect(search).toBeEditable();
+  await search.fill('artflow-e2e-no-such-file');
+  await expect(search).toHaveValue('artflow-e2e-no-such-file');
+  await expect(page.getByRole('table')).toBeVisible();
 });
-
