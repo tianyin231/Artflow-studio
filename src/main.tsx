@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import './utils/dayjs';
 import App from './App';
 import I18nProvider from './components/I18nProvider';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -29,4 +30,3 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </React.StrictMode>
 );
-

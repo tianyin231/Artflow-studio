@@ -10,6 +10,46 @@ jest.mock('dayjs', () => {
   };
 });
 
+jest.mock('dayjs/plugin/utc', () => ({
+  __esModule: true,
+  default: jest.requireActual('dayjs/plugin/utc'),
+}));
+
+jest.mock('dayjs/plugin/customParseFormat', () => ({
+  __esModule: true,
+  default: jest.requireActual('dayjs/plugin/customParseFormat'),
+}));
+
+jest.mock('dayjs/plugin/advancedFormat', () => ({
+  __esModule: true,
+  default: jest.requireActual('dayjs/plugin/advancedFormat'),
+}));
+
+jest.mock('dayjs/plugin/weekday', () => ({
+  __esModule: true,
+  default: jest.requireActual('dayjs/plugin/weekday'),
+}));
+
+jest.mock('dayjs/plugin/localeData', () => ({
+  __esModule: true,
+  default: jest.requireActual('dayjs/plugin/localeData'),
+}));
+
+jest.mock('dayjs/plugin/weekOfYear', () => ({
+  __esModule: true,
+  default: jest.requireActual('dayjs/plugin/weekOfYear'),
+}));
+
+jest.mock('dayjs/plugin/weekYear', () => ({
+  __esModule: true,
+  default: jest.requireActual('dayjs/plugin/weekYear'),
+}));
+
+jest.mock('dayjs/plugin/timezone', () => ({
+  __esModule: true,
+  default: jest.requireActual('dayjs/plugin/timezone'),
+}));
+
 // Mock Vite environment variables for tests
 if (typeof globalThis !== 'undefined') {
   globalThis.__VITE_ENV__ = {
@@ -68,4 +108,3 @@ Object.defineProperty(global, 'import', {
   },
   writable: true,
 });
-
